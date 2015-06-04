@@ -2,11 +2,13 @@
 % FUNCTION computeSphericalFromCartesian
 % Returns spher as (phi, theta) pair
 
-% This file is part of the Functional Normalization Toolbox, (c) 2008 by the authors.
+% This file is part of the Functional Normalization Toolbox,
+(c) 2008 by the authors.
 % Please see AUTHORS and LICENSE file in the project root directory
 """
 
 import numpy as np
+
 
 def compute_spherical_from_cartesian(cart, coord_maps):
     """
@@ -27,7 +29,7 @@ def compute_spherical_from_cartesian(cart, coord_maps):
     mags = np.sqrt((cart**2).sum(axis=0))
 
     if str(cart.dtype).startswith('complex'):
-        raise ValueError('compute_spherical_from_cartesian: '\
+        raise ValueError('compute_spherical_from_cartesian: '
                          'cart array contains imaginary components.')
 
     xs = cart[0, :]

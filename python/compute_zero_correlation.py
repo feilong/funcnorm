@@ -5,11 +5,13 @@
 % warps should be a cell array of warps for each subject
 % i.e., warps{1} is a 3 x N matrix
 
-% This file is part of the Functional Normalization Toolbox, (c) 2008 by the authors.
+% This file is part of the Functional Normalization Toolbox,
+ (c) 2008 by the authors.
 % Please see AUTHORS and LICENSE file in the project root directory
 """
 
 import numpy as np
+
 
 def compute_zero_correlation(cart_coords, warps):
     """
@@ -51,8 +53,8 @@ def compute_zero_correlation(cart_coords, warps):
         c /= np.sqrt(np.sum(c**2))
         # Now rotate c onto z-axis (rotate about z-axis followed by
         # rotation about y-axis)
-        theta = np.arctan2(c[0,1], c[0,0])
-        phi = np.arccos(c[0,2])
+        theta = np.arctan2(c[0, 1], c[0, 0])
+        phi = np.arccos(c[0, 2])
         R1 = np.array([[np.cos(theta), np.sin(theta), 0],
                        [-np.sin(theta), np.cos(theta), 0],
                        [0, 0, 1]])
