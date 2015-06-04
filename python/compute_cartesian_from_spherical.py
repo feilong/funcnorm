@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def compute_cartesian_from_spherical(spher, coord_maps):
     """
     Parameters
@@ -18,7 +19,7 @@ def compute_cartesian_from_spherical(spher, coord_maps):
     cart = np.zeros((3, N), dtype=spher.dtype)
 
     if str(spher.dtype).startswith('complex'):
-        raise ValueError('compute_cartesian_from_spherical: '\
+        raise ValueError('compute_cartesian_from_spherical: '
                          'spher array contains imaginary components.')
 
     phis = spher[0, :]

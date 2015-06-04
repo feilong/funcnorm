@@ -3,7 +3,7 @@
 %   coord1 are the coordinates for one voxel
 %   If coord1 is a 3 x 1 vector, then coordinates are Cartesian (x, y, z)
 %   If coord1 is a 2 x 1 vector, then coordinates are spherical (phi, theta)
-%   coord2 are the coordinates of N voxels 
+%   coord2 are the coordinates of N voxels
 %   coord2 must  be in the same coordinate representation as coord1, meaning
 %   size(coord1, 1) == size(coord2, 1)
 %   So coord2 is either 2 x N or 3 x N, depending on coord1
@@ -20,22 +20,24 @@
 %   coord2 are the coordinates of N voxels as well
 %   coord2 must be in the same coordinate representation as coord1, meaning
 %   size(coord1, 1) == size(coord2, 1)
-%   
+%
 %   This function returns a 1 x N vector representing the spherical
 %   geodesic distances between the columns of coord1 with the cooresponding
 %   column in coord2
 %
 %
-% This file is part of the Functional Normalization Toolbox, (c) 2008 by the authors.
+% This file is part of the Functional Normalization Toolbox,
+ (c) 2008 by the authors.
 % Please see AUTHORS and LICENSE file in the project root directory
 """
 
 import numpy as np
 
+
 def compute_geodesic_distances(coord1, coord2, rho=1.0):
     """ Compute geodesic distances between voxels based on coordinates.
 
-    If `coord1` only has one column/voxel (single sub-mode), its geodesic 
+    If `coord1` only has one column/voxel (single sub-mode), its geodesic
     distances with the columns/voxels of `coord2` are calculated.
 
     If `coord1` has multiple columns/voxels (multi sub-mode), the geodesic
@@ -134,25 +136,25 @@ def create_test_data():
     for i in range(20):
         a = np.random.random((3, 20)) * .5
         b = np.random.random((3, 20)) * .5
-        savemat('tests/test_compute_geodesic_distances_data/'\
+        savemat('tests/test_compute_geodesic_distances_data/'
                 'cartesian-multi-%03d.mat' % i,
-                {'a':a, 'b':b})
-        savemat('tests/test_compute_geodesic_distances_data/'\
+                {'a': a, 'b': b})
+        savemat('tests/test_compute_geodesic_distances_data/'
                 'cartesian-single-%03d.mat' % i,
-                {'a':a[:,[0]], 'b':b})
+                {'a': a[:, [0]], 'b': b})
     for i in range(20):
         a = np.random.random((2, 20))
         b = np.random.random((2, 20))
-        a[0,:] *= np.pi
-        b[0,:] *= np.pi
-        a[1,:] *= np.pi * 2.0
-        b[1,:] *= np.pi * 2.0
-        savemat('tests/test_compute_geodesic_distances_data/'\
+        a[0, :] *= np.pi
+        b[0, :] *= np.pi
+        a[1, :] *= np.pi * 2.0
+        b[1, :] *= np.pi * 2.0
+        savemat('tests/test_compute_geodesic_distances_data/'
                 'spherical-multi-%03d.mat' % i,
-                {'a':a, 'b':b})
-        savemat('tests/test_compute_geodesic_distances_data/'\
+                {'a': a, 'b': b})
+        savemat('tests/test_compute_geodesic_distances_data/'
                 'spherical-single-%03d.mat' % i,
-                {'a':a[:,[0]], 'b':b})
+                {'a': a[:, [0]], 'b': b})
 
 
 if __name__ == '__main__':
