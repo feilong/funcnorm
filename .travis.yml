@@ -7,10 +7,10 @@ virtualenv:
 before_install:
   - sudo apt-get -qq install python-scipy
 install:
-  - pip install coveralls flake8
+  - pip install coveralls flake8 nose-cov
 
 script:
-  - nosetests -v --with-coverage python
+  - nosetests -v --with-cov --cov-config .coveragerc --cov python
   - flake8 python
 after_success:
   - coveralls
