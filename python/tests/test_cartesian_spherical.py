@@ -4,6 +4,7 @@ from numpy.testing import assert_allclose
 from ..compute_spherical_from_cartesian import compute_spherical_from_cartesian
 from ..compute_cartesian_from_spherical import compute_cartesian_from_spherical
 
+
 def test_cartesian_spherical_cartesian():
     np.random.seed(0)
     N = 500
@@ -14,6 +15,7 @@ def test_cartesian_spherical_cartesian():
     spher = compute_spherical_from_cartesian(cart, coord_maps)
     cart2 = compute_cartesian_from_spherical(spher, coord_maps)
     assert_allclose(cart, cart2)
+
 
 def test_spherical_cartesian_spherical():
     np.random.seed(0)

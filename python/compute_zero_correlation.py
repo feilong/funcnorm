@@ -39,7 +39,6 @@ def compute_zero_correlation(cart_coords, warps):
         warp_cart_coords.append(cart_coords + warps[j])
     avg_warp = np.array(warp_cart_coords).mean(axis=0)
 
-    min_proj = 1
     for j in range(N):
         # Project average warp back to the sphere
         avg_warp[:, j] /= np.sqrt((avg_warp[:, j]**2).sum())
@@ -70,7 +69,8 @@ def compute_zero_correlation(cart_coords, warps):
 
         # R = R1^-1*R2*R1;
         R = np.linalg.inv(R1).dot(R2).dot(R1)
-        proj = cart_coords[:, [j]].T.dot(R).dot(avg_warp[:, [j]])
+        # Why do we need proj here?
+        # proj = cart_coords[:, [j]].T.dot(R).dot(avg_warp[:, [j]])
 
         # Use the rotation matrix to rotate each subject
         for k in range(nsubj):
