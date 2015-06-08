@@ -8,6 +8,7 @@ from ..compute_zero_correlation import compute_zero_correlation
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
+
 def test_compute_zero_correlation():
     """ test_compute_zero_correlation
     Test if compute_zero_correlation gives the same results

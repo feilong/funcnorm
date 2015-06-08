@@ -100,10 +100,11 @@ def compute_geodesic_distances(coord1, coord2, rho=1.0):
         raise ValueError(msg)
 
     if coord1.shape[1] == 1:
-        sub_mode = 'single'
+        # No longer need `sub_mode`
+        # sub_mode = 'single'
         coord1 = np.tile(coord1, (1, coord2.shape[1]))
     else:
-        sub_mode = 'multi'
+        # sub_mode = 'multi'
         if coord1.shape[1] != coord2.shape[1]:
             msg = 'compute_geodesic_distances: coord1 and coord2 must '\
                   'have the same number of columns in multi sub-mode.'
