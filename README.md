@@ -1,3 +1,6 @@
+![funcnorm travis-ci build status](https://secure.travis-ci.org/feilong/funcnorm.png?branch=rf-python)
+![funcnorm coveralls coverage status](https://coveralls.io/repos/feilong/funcnorm/badge.png?branch=rf-python)
+
 # funcnorm
 Functional Normalization Toolbox: Inter-subject alignment of cortical anatomy using FMRI response and connectivity correlations
 
