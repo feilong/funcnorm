@@ -3,6 +3,85 @@ import numpy as np
 from compute_geodesic_distances import compute_geodesic_distances
 
 
+def compute_areal_terms(triangles, cart_coords, coord_maps,
+                        orig_tri_areas, tri_normals, rho=1.0,
+                        compute_derivatives=True):
+    """
+    Parameters
+    ----------
+    triangles : (3, n_triangles) array
+    cart_coords : (3, n_nodes) array
+    coord_maps : int or (n_nodes, ) array-like
+    orig_tri_areas : (n_triangles, ) array
+    tri_normals : (3, n_triangles) array
+
+    Returns
+    -------
+    tri_area : float
+    dareal_dphi : (n_triangles, ) array
+    dareal_dtheta : (n_triangles, ) array
+    """
+    n_nodes = cart_coords.shape[1]
+    dtype = cart_coords.dtype
+    # triArea = cast(0, class(cartCoords));
+
+    As, Bs = triangles_to_vectors(triangles, cart_coords, rho)
+    abcrosses = t_cross(As, Bs)
+
+    # The area of the triangle formed by `abcross` and `tri_normals`.
+    new_areas = np.sum(abcrosses * tri_normals, axis=0) / 2
+
+    # Less than 0 indicates folding of the cortex
+    locs = np.where(new_areas <= 0)[0]
+    a_terms = new_areas - orig_tri_areas
+    # sum(diff_areas^2) for areas w/ negative values (foldings)
+    # Seems to be something used for regularization.
+    tri_area = np.sum(a_terms[locs]**2)
+
+    if not compute_derivatives:
+        return tri_area
+
+    dareal_dphi = np.zeros((n_nodes, ), dtype=dtype)
+    dareal_dtheta = np.zeros((n_nodes, ), dtype=dtype)
+    dp_dphi, dp_dtheta = compute_partials_cartesian(cart_coords, coord_maps)
+
+    bcns = t_cross(Bs, tri_normals)  # B cross N, (3, n_triangles)
+    ncas = t_cross(tri_normals, As)  # N cross A
+
+    for loc in locs:
+        tmp1 = a_terms[loc] * bcns[:, loc]
+        tmp2 = a_terms[loc] * ncas[:, loc]
+        tmps = [-tmp1 - tmp2, tmp1, tmp2]
+        for node in range(3):
+            cI = triangles[node, loc]
+            tmp = tmps[node]  # (3, )
+            dareal_dphi[cI] += np.sum(tmp * dp_dphi[:, cI])
+            dareal_dtheta[cI] += np.sum(tmp * dp_dtheta[:, cI])
+
+        # cI = triangles[0, loc]
+        # dp0_dphi = dp_dphi[:, cI]
+        # dp0_dtheta = dp_dtheta[:, cI]
+        # tmp = -a_terms[loc] * (bcns[:, loc] + ncas[:, loc]).T
+        # dareal_dphi[cI] += np.sum(tmp * dp0_dphi)
+        # dareal_dtheta[cI] += np.sum(tmp * dp0_dtheta)
+
+        # cI = triangles[1, loc]
+        # dp1_dphi = dp_dphi[:, cI]
+        # dp1_dtheta = dp_dtheta[:, cI]
+        # tmp = a_terms[loc] * bcns[:, loc].T
+        # dareal_dphi[cI] += np.sum(tmp * dp1_dphi)
+        # dareal_dtheta[cI] += np.sum(tmp * dp1_dtheta)
+
+        # cI = triangles[2, loc]
+        # dp2_dphi = dp_dphi[:, cI]
+        # dp2_dtheta = dp_dtheta[:, cI]
+        # tmp = a_terms[loc] * ncas[:, loc].T
+        # dareal_dphi[cI] += np.sum(tmp * dp2_dphi)
+        # dareal_dtheta[cI] += np.sum(tmp * dp2_dtheta)
+
+    return tri_area, dareal_dphi, dareal_dtheta
+
+
 def compute_metric_distances(cart_coords, nbrs, num_nbrs, dtype='float'):
     """
     Parameters
@@ -89,7 +168,7 @@ def triangles_to_vectors(triangles, cart_coords, rho):
     p2s = cart_coords[:, triangles[2, :]]
 
     As = rho * (p1s - p0s)
-    Bs = rho * (p2s - p1s)
+    Bs = rho * (p2s - p0s)
 
     return As, Bs
 
@@ -154,34 +233,4 @@ def compute_partials_cartesian(cart_coords, coord_maps):
         dp_dphi[idx, j] = dp_dphi_vals
         dp_dtheta[idx, j] = dp_dtheta_vals
 
-        # x, y, z = cart_coords[:, j]
-        # mag = mags[j]
-
-        # if coord_maps[j] == 1:
-        #     phi = np.arccos(x/mag)
-        #     theta = np.arctan2(y, z)
-        #     dp_dphi[:, j] = (-np.sin(phi),
-        #                      np.cos(phi) * np.sin(theta),
-        #                      np.cos(phi) * np.cos(theta))
-        #     dp_dtheta[:, j] = (0,
-        #                        np.sin(phi) * np.cos(theta),
-        #                        -np.sin(phi) * np.sin(theta))
-        # elif coord_maps[j] == 2:
-        #     phi = np.arccos(y/mag)
-        #     theta = np.arctan2(z, x)
-        #     dp_dphi[:, j] = (np.cos(phi) * np.cos(theta),
-        #                      -np.sin(phi),
-        #                      np.cos(phi) * np.sin(theta))
-        #     dp_dtheta[:, j] = (-np.sin(phi) * np.sin(theta),
-        #                        0,
-        #                        np.sin(phi) * np.cos(theta))
-        # elif coord_maps[j] == 3:
-        #     phi = np.arccos(z/mag)
-        #     theta = np.arctan2(y, x)
-        #     dp_dphi[:, j] = (np.cos(phi) * np.cos(theta),
-        #                      np.cos(phi) * np.sin(theta),
-        #                      -np.sin(phi))
-        #     dp_dtheta[:, j] = (-np.sin(phi) * np.sin(theta),
-        #                        np.sin(phi) * np.cos(theta),
-        #                        0)
     return dp_dphi, dp_dtheta
