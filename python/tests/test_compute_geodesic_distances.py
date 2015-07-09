@@ -13,10 +13,10 @@ def test_compute_geodesic_distances():
     coord1 = np.random.random((3, 10))
     gds = compute_geodesic_distances(coord1, coord1)
     # test results size and type are correct
-    assert_equal(gds.shape, (1, 10))
+    assert_equal(gds.shape, (10, ))
     assert_true(isinstance(gds, np.ndarray))
     # test distance with self is 0
-    assert_allclose(gds, np.zeros((1, 10)))
+    assert_allclose(gds, np.zeros((10, )))
 
     coord2 = np.random.random((3, 10)) * .5
     gds2 = compute_geodesic_distances(coord1, coord2)
@@ -60,4 +60,4 @@ def test_compare_with_matlab():
                     '%s-%s-%03d-out.mat' % (coord, submode, i))
                 res = loadmat(out_file)['res']
                 res2 = compute_geodesic_distances(a, b)
-                assert_allclose(res, res2)
+                assert_allclose(res.ravel(), res2)

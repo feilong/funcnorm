@@ -71,7 +71,7 @@ def compute_geodesic_distances(coord1, coord2, rho=1.0):
 
     Returns
     -------
-    gds : (1 x N) array
+    gds : (n_nodes, ) array
         In single sub-mode, it's the geodesic distances of the column in
         `coord1` to each of the columns in `coord2`.
         In multi sub-mode, it's the geodesic distances between the columns
@@ -111,7 +111,7 @@ def compute_geodesic_distances(coord1, coord2, rho=1.0):
             raise ValueError(msg)
 
     N = coord2.shape[1]
-    gds = np.zeros((1, N), dtype=coord1.dtype)
+    gds = np.zeros((N, ), dtype=coord1.dtype)
 
     if mode == 'spherical':
         phi1, theta1 = coord1[0, :], coord1[1, :]
@@ -126,7 +126,7 @@ def compute_geodesic_distances(coord1, coord2, rho=1.0):
                 (np.cross(coord1, coord2, axisa=0, axisb=0).T**2).sum(axis=0)
             ))
 
-    gds = gds.reshape(1, -1)
+    # gds = gds.reshape(1, -1)
 
     return gds
 
