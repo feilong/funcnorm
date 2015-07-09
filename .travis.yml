@@ -2,10 +2,14 @@ language: python
 python:
   - "2.7"
 
+sudo: false
+addons:
+  apt:
+    packages:
+      - python-scipy
+
 virtualenv:
   system_site_packages: true
-before_install:
-  - sudo apt-get -qq install python-scipy
 install:
   - pip install coveralls flake8 nose-cov
 
