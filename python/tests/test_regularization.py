@@ -5,9 +5,20 @@ from nose.tools import assert_true, assert_equal, assert_almost_equal
 from numpy.testing import assert_array_equal, assert_allclose
 
 from ..regularization import compute_initial_oriented_areas, \
-    compute_partials_cartesian, compute_areal_terms
+    compute_partials_cartesian, compute_areal_terms, compute_metric_terms
 
 DIR = os.path.dirname(os.path.realpath(__file__))
+
+
+def test_compute_metric_terms():
+    fname = os.path.join(DIR, 'data_for_test_compute_metric_terms.mat')
+    mat = loadmat(fname)
+    md_diff, dmd_diffs_dphi, dmd_diffs_dtheta = compute_metric_terms(
+        mat['orig_nbrs'], mat['cart_coords'], mat['coord_maps'].ravel(),
+        mat['orig_metric_distances'], mat['res'], compute_derivatives=True)
+    assert_almost_equal(md_diff, float(mat['md_diff']))
+    assert_allclose(dmd_diffs_dphi, mat['dmd_diffs_dphi'].ravel())
+    assert_allclose(dmd_diffs_dtheta, mat['dmd_diffs_dtheta'].ravel())
 
 
 def test_compute_areal_terms():

@@ -1,6 +1,67 @@
 import numpy as np
 
 from compute_geodesic_distances import compute_geodesic_distances
+from compute_spherical_from_cartesian import compute_spherical_from_cartesian
+from derivatives import gds_derivatives
+
+
+def compute_metric_terms(orig_nbrs, cart_coords, coord_maps,
+                         orig_metric_distances, res, rho=1.0,
+                         compute_derivatives=False):
+    """
+    Parameters
+    ----------
+    orig_nbrs : (max_nbrs, n_nodes) array
+    cart_coords : (3, n_nodes) array
+    coord_maps : (n_nodes, ) array or list
+    orig_metric_distances : (max_nbrs, n_nodes) array
+    res : int or float?
+
+    Returns
+    -------
+    md_diff : float
+    dmd_diffs_dphi : (n_nodes, ) array
+    dmd_diffs_dtheta : (n_nodes, ) array
+
+    Notes
+    -----
+    We don't need `orig_num_nbrs` as a parameter as the Matlab version.
+
+    """
+    n_nodes = cart_coords.shape[1]
+    max_num_nbrs = orig_nbrs.shape[0]
+    # dtype = cart_coords.dtype
+
+    locs = np.where(orig_nbrs == -99)
+
+    full_orig_nbrs = orig_nbrs.copy()  # Do we need deep copy here?
+    full_orig_nbrs[locs] = locs[1]  # locs[1] == which column
+    cc = np.repeat(cart_coords, max_num_nbrs, axis=1)
+    nc = cart_coords[:, full_orig_nbrs.T.ravel()]
+
+    gds = compute_geodesic_distances(cc, nc, rho)
+    curr_md = gds.reshape((n_nodes, max_num_nbrs)).T
+
+    md_diff_mat = curr_md - orig_metric_distances
+    md_diff = np.sum(md_diff_mat**2)
+
+    if not compute_derivatives:
+        return md_diff
+
+    cm = np.repeat(coord_maps, max_num_nbrs, axis=0)
+
+    csc = compute_spherical_from_cartesian(cc, cm)
+    nsc = compute_spherical_from_cartesian(nc, cm)
+
+    dg_dphi, dg_dtheta = gds_derivatives(csc, nsc, res, gds)
+    dg_dphi = dg_dphi.reshape((n_nodes, max_num_nbrs)).T
+    dg_dtheta = dg_dtheta.reshape((n_nodes, max_num_nbrs)).T
+
+    # (max_nbrs, n_nodes) * (max_nbrs, n_nodes) -> sum -> (n_nodes, )
+    dmd_diffs_dphi = np.sum(dg_dphi * md_diff_mat, axis=0)
+    dmd_diffs_dtheta = np.sum(dg_dtheta * md_diff_mat, axis=0)
+
+    return md_diff, dmd_diffs_dphi, dmd_diffs_dtheta
 
 
 def compute_areal_terms(triangles, cart_coords, coord_maps,
