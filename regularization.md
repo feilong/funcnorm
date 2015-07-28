@@ -40,8 +40,20 @@ The oriented area is the area projected to the plane orthogonal to $$\vec{n_i^0}
 
 $$ J_{a} = \frac{1}{2T} \sum_{i=1}^{T} P(A_{i}^{t}) (A_{i}^{t} - A_{i}^{0})^2, P(A_i^t) = \cases{1, A_{i}^{t} \le 0 \cr 0, \text{otherwise}} $$
 
+### Computation of Areal Terms
+
+Input:
+
+- triangles
+- coordinates (Cartesian; `coord_maps` only for computing derivatives)
+- original unit normal vectors and areas
+
+Also needs:
+
+- `dp_dphi`, `dp_dtheta` from `compute_partials_cartesian` for computing derivatives.
+
 ## Reference
 
-Fischl, B., Sereno, M. I., & Dale, A. M. (1999). Cortical Surface-Based Analysis: II: Inflation, Flattening, and a Surface-Based Coordinate System. _NeuroImage, 9_(2), 195–207. http://doi.org/10.1006/nimg.1998.0396
+Fischl, B., Sereno, M. I., & Dale, A. M. (1999). Cortical Surface-Based Analysis: II: Inflation, Flattening, and a Surface-Based Coordinate System. _NeuroImage, 9_(2), 195--207. http://doi.org/10.1006/nimg.1998.0396
 
-Conroy, B., Singer, B., Haxby, J., & Ramadge, P. J. (2009). fMRI-Based Inter-Subject Cortical Alignment Using Functional Connectivity. _Advances in Neural Information Processing Systems, 22_, 378–386.
+Conroy, B., Singer, B., Haxby, J., & Ramadge, P. J. (2009). fMRI-Based Inter-Subject Cortical Alignment Using Functional Connectivity. _Advances in Neural Information Processing Systems, 22_, 378--3866
