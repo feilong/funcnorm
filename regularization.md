@@ -3,7 +3,37 @@ title: Regularization
 layout: default
 ---
 
-## Regularization of Metric Distortions
+## Implementation
+
+### Computation of Metric Terms
+
+Input:
+
+- `nbrs`
+- `cart_coords`; `rho` for `gds`; `coord_maps` for derivatives
+- `orig_metric_distances`
+- `resolution`, used to calculate `gds_derivatives`
+
+Depends on:
+
+- `compute_geodesic_distances`
+- `gds_derivatives` for computing derivatives.
+
+### Computation of Areal Terms
+
+Input:
+
+- triangles
+- coordinates (Cartesian; `coord_maps` only for computing derivatives)
+- original unit normal vectors and areas
+
+Depends on:
+
+- `compute_partials_cartesian` for computing derivatives `dp_dphi` and `dp_dtheta`.
+
+## Methods in Fischl et al. (1999)
+
+### Regularization of Metric Distortions
 
 $$ J_{d} = \frac{1}{4V} \sum_{i=1}^{V} \sum_{n\in{N(i)}} (d_{in}^{t} - d_{in}^{0})^2 $$
 
@@ -17,7 +47,7 @@ where:
 
 The $$\frac{1}{4}$$ scaling factor is because each distance between two vertices is calculated twice, and a factor of 2 is introduced by taking the derivative.
 
-## Regularization of Folds in the Surface
+### Regularization of Folds in the Surface
 
 The unit normal vector can be calculated by
 
@@ -40,17 +70,6 @@ The oriented area is the area projected to the plane orthogonal to $$\vec{n_i^0}
 
 $$ J_{a} = \frac{1}{2T} \sum_{i=1}^{T} P(A_{i}^{t}) (A_{i}^{t} - A_{i}^{0})^2, P(A_i^t) = \cases{1, A_{i}^{t} \le 0 \cr 0, \text{otherwise}} $$
 
-### Computation of Areal Terms
-
-Input:
-
-- triangles
-- coordinates (Cartesian; `coord_maps` only for computing derivatives)
-- original unit normal vectors and areas
-
-Also needs:
-
-- `dp_dphi`, `dp_dtheta` from `compute_partials_cartesian` for computing derivatives.
 
 ## Reference
 
