@@ -5,7 +5,8 @@ from nose.tools import assert_true, assert_equal, assert_almost_equal
 from numpy.testing import assert_array_equal, assert_allclose
 
 from ..regularization import compute_initial_oriented_areas, \
-    compute_partials_cartesian, compute_areal_terms, compute_metric_terms
+    compute_partials_cartesian, compute_areal_terms, compute_metric_terms, \
+    gds_derivatives
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -44,6 +45,18 @@ def test_compute_partials_cartesian():
     dp_dphi, dp_dtheta = compute_partials_cartesian(cart_coords, coord_maps)
     assert_allclose(dp_dphi, data['dp_dphi'])
     assert_allclose(dp_dtheta, data['dp_dtheta'])
+
+
+def test_gds_derivatives():
+    fname = os.path.join(DIR, 'data_for_test_derivatives.mat')
+    mat = loadmat(fname)
+    coords1, coords2 = mat['spher_coords_1'], mat['spher_coords_2']
+    resolution, gds = float(mat['resolution']), mat['gds'].ravel()
+
+    dg_dphi, dg_dtheta = gds_derivatives(coords1, coords2, resolution, gds)
+
+    assert_allclose(dg_dphi, mat['dg_dphi'].ravel())
+    assert_allclose(dg_dtheta, mat['dg_dtheta'].ravel())
 
 
 def test_compute_initial_oriented_areas():
