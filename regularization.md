@@ -31,6 +31,41 @@ Depends on:
 
 - `compute_partials_cartesian` for computing derivatives `dp_dphi` and `dp_dtheta`.
 
+
+## Formulas
+
+### Metric Distortions
+
+$$ J_{d} = \frac{1}{4V} \sum_{i=1}^{V} \sum_{n\in{N(i)}} (d_{current}(i, n) - d_{original}(i, n))^2 $$
+
+$$ \frac{\partial J_{d}}{\partial\phi_i} = \frac{1}{V} \sum_{n\in{N(i)}}(d_{current}(i, n) - d_{original}(i, n)) \frac{\partial d_{current}(i, n)}{\partial\phi_i} $$
+
+$$ \frac{\partial J_{d}}{\partial\theta_i} = \frac{1}{V} \sum_{n\in{N(i)}}(d_{current}(i, n) - d_{original}(i, n)) \frac{\partial d_{current}(i, n)}{\partial\theta_i} $$
+
+where $$\frac{\partial d_{current}(i, n)}{\partial\phi_i}$$ and $$\frac{\partial d_{current}(i, n)}{\partial\theta_i}$$ can be calculated using `gds_derivatives`.
+
+### Folding
+
+$$ J_{a} = \frac{1}{2T} \sum_{t=1}^{T} P(A_{current}(t)) (A_{current}(t) - A_{original}(t))^2, P(x) = \cases{1, x \le 0 \cr 0, \text{otherwise}} $$
+
+$$ \frac{\partial J_a}{\partial\phi_i} = \frac{1}{T} \sum_{t\text{ containing }i} P(A_{current}(t)) (A_{current}(t) - A_{original}(t)) \frac{\partial A_{current}(t)}{\partial\phi_i}$$
+
+$$ \frac{\partial J_a}{\partial\theta_i} = \frac{1}{T} \sum_{t\text{ containing }i} P(A_{current}(t)) (A_{current}(t) - A_{original}(t)) \frac{\partial A_{current}(t)}{\partial\theta_i}$$
+
+For the three vertices that form the triangle $$V1 = (x_1, y_1, z_1)$$, $$V2 = (x_2, y_2, z_2)$$ and $$V3 = (x_3, y_3, z_3)$$, let
+
+$$ \vec{a} = (x_2-x_1, y_2-y_1, z_2-z_1)\\
+\vec{b} = (x_3-x_1, y_3-y_1, z_3-z_1) $$
+
+We will have:
+
+$$ \begin{eqnarray}
+(\frac{\partial A}{\partial x_1}, \frac{\partial A}{\partial y_1}, \frac{\partial A}{\partial z_1}) &=& \vec{n}\times(\vec{b}-\vec{a}) \\
+(\frac{\partial A}{\partial x_2}, \frac{\partial A}{\partial y_2}, \frac{\partial A}{\partial z_2}) &=& \vec{n}\times(-\vec{b}) \\
+(\frac{\partial A}{\partial x_3}, \frac{\partial A}{\partial y_3}, \frac{\partial A}{\partial z_3}) &=& \vec{n}\times(\vec{a})
+\end{eqnarray} $$
+
+
 ## Methods in Fischl et al. (1999)
 
 ### Regularization of Metric Distortions
@@ -71,8 +106,8 @@ The oriented area is the area projected to the plane orthogonal to $$\vec{n_i^0}
 $$ J_{a} = \frac{1}{2T} \sum_{i=1}^{T} P(A_{i}^{t}) (A_{i}^{t} - A_{i}^{0})^2, P(A_i^t) = \cases{1, A_{i}^{t} \le 0 \cr 0, \text{otherwise}} $$
 
 
-## Reference
+## References
 
 Fischl, B., Sereno, M. I., & Dale, A. M. (1999). Cortical Surface-Based Analysis: II: Inflation, Flattening, and a Surface-Based Coordinate System. _NeuroImage, 9_(2), 195--207. http://doi.org/10.1006/nimg.1998.0396
 
-Conroy, B., Singer, B., Haxby, J., & Ramadge, P. J. (2009). fMRI-Based Inter-Subject Cortical Alignment Using Functional Connectivity. _Advances in Neural Information Processing Systems, 22_, 378--3866
+Conroy, B., Singer, B., Haxby, J., & Ramadge, P. J. (2009). fMRI-Based Inter-Subject Cortical Alignment Using Functional Connectivity. _Advances in Neural Information Processing Systems, 22_, 378--386.
