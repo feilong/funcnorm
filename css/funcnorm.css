@@ -1,0 +1,26 @@
+body {
+    background-color: #252525;
+}
+.wrapper {
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    font: 15px/1.5 Arial, Helvetica, sans-serif;
+    color: #cfcfcf;
+    background-color: #353535;
+    border: 50px solid transparent;
+    padding: 15px;
+    -webkit-border-image:
+      -webkit-gradient(linear, 0 0, 100% 0, from(#252525), to(#252525), color-stop(0.5, #353535)) 1 50%;
+}
+h1, h2, h3, h4, h5, h6 {
+    color: #ffa665;
+    font-family: 'Slabo 27px', serif;
+}
+code {
+    color: #dfcfbf;
+    font-family: 'Courier New', Courier, monospace;
+}
+div.MathJax_Display, span.MathJax {
+    color: #dfdfaf;
+}
