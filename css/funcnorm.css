@@ -24,3 +24,9 @@ code {
 div.MathJax_Display, span.MathJax {
     color: #dfdfaf;
 }
+a:link {
+    color: #ffcfaf;
+}
+a:visited {
+    color: #cfafff;
+}
