@@ -32,6 +32,8 @@ def compute_interp_on_sphere(T, cart_coords, neighbors, warp, nn=False):
         num_nbrs[j] = np.sum(neighbors[:, j] != -99)
 
     for j in range(n_nodes):
+        if j % 100 == 0:
+            print j,
         curr_cart_coords = warp_cart_coords[:, [j]]
 
         c_nbrs = neighbors[:num_nbrs[j], j]
@@ -65,5 +67,7 @@ def compute_interp_on_sphere(T, cart_coords, neighbors, warp, nn=False):
             raise ValueError('non_zero_locs empty for node %d' % j)
 
         TW[:, j] = T[:, tri_nbrs].dot(interp_vals.T)
+
+    print ''
 
     return TW
