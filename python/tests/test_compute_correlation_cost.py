@@ -6,40 +6,16 @@ from ..blur_dataset import blur_dataset_no_svd
 from ..compute_correlation_cost import compute_correlation_cost
 from ..compute_spherical_from_cartesian import compute_spherical_from_cartesian
 
-
-def generate_random_dataset(seed, n_nodes, n_timepoints):
-    np.random.seed(seed)
-    ds = np.random.random((n_timepoints, n_nodes))
-    ds /= np.linalg.norm(ds, axis=0)
-    return ds
-
-
-def generate_random_nbrs(seed, n_nodes, max_nbrs=6):
-    np.random.seed(seed)
-    nbrs = -99 * np.ones((max_nbrs, n_nodes), dtype='int')
-    total_nbrs = np.zeros((n_nodes, ))
-    for j in range(n_nodes):
-        n_nbrs = np.random.randint(1, max_nbrs+1)
-        nbrs[:n_nbrs, j] = np.random.choice(range(n_nodes), (n_nbrs, ), False)
-        total_nbrs[j] = n_nbrs
-    return nbrs, total_nbrs
-
-
-def generate_random_coords(seed, n_nodes):
-    np.random.seed(seed)
-    cart_coords = np.random.random((3, n_nodes))
-    coord_maps = np.random.choice([1, 2, 3], (n_nodes, ), True)
-    spher_coords = compute_spherical_from_cartesian(cart_coords, coord_maps)
-    return cart_coords, spher_coords, coord_maps
+from .test_utils import random_dataset, random_nbrs, random_coords
 
 
 def test_compute_correlation_cost():
     n_nodes = 300
     n_timepoints = 100
-    ds1 = generate_random_dataset(0, n_nodes, n_timepoints)
-    ds2 = generate_random_dataset(1, n_nodes, n_timepoints)
-    nbrs, total_nbrs = generate_random_nbrs(0, n_nodes)
-    cart_coords, spher_coords, coord_maps = generate_random_coords(0, n_nodes)
+    ds1 = random_dataset(0, n_nodes, n_timepoints)
+    ds2 = random_dataset(1, n_nodes, n_timepoints)
+    nbrs, total_nbrs = random_nbrs(0, n_nodes)
+    cart_coords, spher_coords, coord_maps = random_coords(0, n_nodes)
     coords_list = [compute_spherical_from_cartesian(cart_coords, i+1)
                    for i in range(3)]
 
@@ -68,10 +44,10 @@ def test_compute_correlation_cost_derivatives():
 def _test_compute_correlation_cost_derivatives(seed=0, atol=1e-5, rtol=1e-4):
     n_nodes = 300
     n_timepoints = 100
-    ds1 = generate_random_dataset(seed, n_nodes, n_timepoints)
-    ds2 = generate_random_dataset(1, n_nodes, n_timepoints)
-    nbrs, total_nbrs = generate_random_nbrs(seed, n_nodes, n_timepoints)
-    cart_coords, spher_coords, coord_maps = generate_random_coords(0, n_nodes)
+    ds1 = random_dataset(seed, n_nodes, n_timepoints)
+    ds2 = random_dataset(1, n_nodes, n_timepoints)
+    nbrs, total_nbrs = random_nbrs(seed, n_nodes, n_timepoints)
+    cart_coords, spher_coords, coord_maps = random_coords(0, n_nodes)
     coords_list = [compute_spherical_from_cartesian(cart_coords, i+1)
                    for i in range(3)]
 
