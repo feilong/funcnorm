@@ -25,11 +25,12 @@ def generate_random_nbrs(seed, n_nodes, max_nbrs=6):
     return nbrs, total_nbrs
 
 
-def generate_random_spher_coords(seed, n_nodes):
+def generate_random_coords(seed, n_nodes):
     np.random.seed(seed)
     cart_coords = np.random.random((3, n_nodes))
-    spher_coords = compute_spherical_from_cartesian(cart_coords, 1)
-    return spher_coords
+    coord_maps = np.random.choice([1, 2, 3], (n_nodes, ), True)
+    spher_coords = compute_spherical_from_cartesian(cart_coords, coord_maps)
+    return cart_coords, spher_coords, coord_maps
 
 
 def test_compute_correlation_cost():
@@ -38,17 +39,19 @@ def test_compute_correlation_cost():
     ds1 = generate_random_dataset(0, n_nodes, n_timepoints)
     ds2 = generate_random_dataset(1, n_nodes, n_timepoints)
     nbrs, total_nbrs = generate_random_nbrs(0, n_nodes)
-    coords = generate_random_spher_coords(0, n_nodes)
+    cart_coords, spher_coords, coord_maps = generate_random_coords(0, n_nodes)
+    coords_list = [compute_spherical_from_cartesian(cart_coords, i+1)
+                   for i in range(3)]
 
     U, s, Vt = np.linalg.svd(ds1, full_matrices=False)
     V1ST = np.tile(s[:, np.newaxis], (1, n_nodes)) * Vt
     W2TU1 = ds2.T.dot(U)
     assert_allclose(W2TU1.dot(V1ST), ds2.T.dot(ds1))
     S = compute_correlation_cost(
-        V1ST, coords, nbrs, total_nbrs, 2, W2TU1, coords,
-        compute_derivatives=False)
+        V1ST, W2TU1, coords_list, coord_maps, spher_coords,
+        nbrs, total_nbrs, 2, compute_derivatives=False)
     assert_true(0 < S < n_nodes)
-    Q = blur_dataset_no_svd(Vt.T, s, coords, nbrs, total_nbrs, 2)
+    Q = blur_dataset_no_svd(Vt.T, s, coords_list[0], nbrs, total_nbrs, 2)
     ds3 = U.dot(Q)
     idx = np.where(np.linalg.norm(ds3, axis=0))[0]
     S2 = 1 - np.sum((ds3 * ds2)[:, idx], axis=0)
@@ -68,31 +71,36 @@ def _test_compute_correlation_cost_derivatives(seed=0, atol=1e-5, rtol=1e-4):
     ds1 = generate_random_dataset(seed, n_nodes, n_timepoints)
     ds2 = generate_random_dataset(1, n_nodes, n_timepoints)
     nbrs, total_nbrs = generate_random_nbrs(seed, n_nodes, n_timepoints)
-    coords = generate_random_spher_coords(seed, n_nodes)
+    cart_coords, spher_coords, coord_maps = generate_random_coords(0, n_nodes)
+    coords_list = [compute_spherical_from_cartesian(cart_coords, i+1)
+                   for i in range(3)]
 
     U, s, Vt = np.linalg.svd(ds1, full_matrices=False)
     V1ST = np.tile(s[:, np.newaxis], (1, n_nodes)) * Vt
     W2TU1 = ds2.T.dot(U)
     S, dS_dphi, dS_dtheta = compute_correlation_cost(
-        V1ST, coords, nbrs, total_nbrs, 2, W2TU1, coords)
+        V1ST, W2TU1, coords_list, coord_maps, spher_coords,
+        nbrs, total_nbrs, 2)
 
     dS_dphi2 = np.zeros(dS_dphi.shape)
     dS_dtheta2 = np.zeros(dS_dtheta.shape)
 
     delta = 1e-8
-    coords2 = coords.copy()
+    coords2 = spher_coords.copy()
     for j in range(n_nodes):
         coords2[0, j] += delta
-        S2 = compute_correlation_cost(V1ST, coords, nbrs, total_nbrs, 2, W2TU1,
-                                      coords2, compute_derivatives=False)
+        S2 = compute_correlation_cost(
+            V1ST, W2TU1, coords_list, coord_maps, coords2, nbrs, total_nbrs, 2,
+            compute_derivatives=False)
         dS_dphi2[j] = (S2 - S) / delta
-        coords2[0, j] = coords[0, j]
+        coords2[0, j] = spher_coords[0, j]
 
         coords2[1, j] += delta
-        S2 = compute_correlation_cost(V1ST, coords, nbrs, total_nbrs, 2, W2TU1,
-                                      coords2, compute_derivatives=False)
+        S2 = compute_correlation_cost(
+            V1ST, W2TU1, coords_list, coord_maps, coords2, nbrs, total_nbrs, 2,
+            compute_derivatives=False)
         dS_dtheta2[j] = (S2 - S) / delta
-        coords2[1, j] = coords[1, j]
+        coords2[1, j] = spher_coords[1, j]
 
     # Q = blur_dataset_no_svd(Vt.T, s, coords, nbrs, total_nbrs, 2)
     # ds3 = U.dot(Q)

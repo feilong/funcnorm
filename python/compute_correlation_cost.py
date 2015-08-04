@@ -4,18 +4,19 @@ from derivatives import f_derivatives
 from interp_f import gds_to_interp_vals
 
 
-def compute_correlation_cost(V1ST, coords, nbrs, total_nbrs, resolution,
-                             W2TU1, warp_coords, thr=1e-8, dtype='float',
+def compute_correlation_cost(V1ST, W2TU1,
+                             coords_list, coord_maps, warp_coords,
+                             nbrs, total_nbrs, resolution,
+                             thr=1e-8, dtype='float',
                              compute_derivatives=True):
     """
     Parameters
     ----------
     V1ST: (K, n_nodes) array
-    W2TU1: (n_timepoints, K) array
-    coords : (2, n_nodes) array
+    W2TU1: (n_nodes, K) array
+    coords_list : list of three (2, n_nodes) array
+    coord_maps : (n_nodes, ) array or alike
     warp_coords : (2, n_nodes) array
-        If it's None, `coords` would be used.
-        If it's an array, its shape should be the same as `coords`.
     nbrs : (max_nbrs, n_nodes) array
     total_nbrs : (n_nodes, ) array
     resolution : float?
@@ -23,9 +24,8 @@ def compute_correlation_cost(V1ST, coords, nbrs, total_nbrs, resolution,
 
     Returns
     -------
-    S : float?
+    S : float
     dS_dphi : (n_nodes, ) array
-        Is this dS_dphi or -dS_dphi?
     dS_dtheta : (n_nodes, ) array
 
     """
@@ -42,7 +42,7 @@ def compute_correlation_cost(V1ST, coords, nbrs, total_nbrs, resolution,
     for j in range(n_nodes):
         curr_coords = warp_coords[:, [j]]
         curr_nbrs = nbrs[:total_nbrs[j], j]
-        nbr_coords = coords[:, curr_nbrs]
+        nbr_coords = coords_list[coord_maps[j]-1][:, curr_nbrs]
 
         gds = compute_geodesic_distances(curr_coords, nbr_coords)
         A, non_zero_locs = gds_to_interp_vals(gds, resolution)
