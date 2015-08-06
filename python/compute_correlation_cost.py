@@ -1,7 +1,10 @@
 import numpy as np
+import logging
 from compute_geodesic_distances import compute_geodesic_distances
 from derivatives import f_derivatives
 from interp_f import gds_to_interp_vals
+
+logger = logging.getLogger('funcnorm')
 
 
 def compute_correlation_cost(V1ST, W2TU1,
@@ -39,6 +42,7 @@ def compute_correlation_cost(V1ST, W2TU1,
     #     dAD_dphi = np.zeros(nbrs.shape, dtype=dtype)
     #     dAD_dtheta = np.zeros(nbrs.shape, dtype=dtype)
 
+    corrs = []
     for j in range(n_nodes):
         curr_coords = warp_coords[:, [j]]
         curr_nbrs = nbrs[:total_nbrs[j], j]
@@ -58,7 +62,9 @@ def compute_correlation_cost(V1ST, W2TU1,
 
         Q /= qnorm
         D = 1.0 / qnorm
-        S += 1.0 - W2TU1[j, :].dot(Q)
+        corr = W2TU1[j, :].dot(Q)
+        corrs.append(corr)
+        S += 1.0 - corr
 
         if not compute_derivatives:
             continue
@@ -73,6 +79,8 @@ def compute_correlation_cost(V1ST, W2TU1,
         dS_dAD = -W2TU1[j, :].dot(V1ST[:, curr_nbrs])  # (n_nbrs, )
         dS_dphi[j] = dS_dAD.dot(dAD_dphi)
         dS_dtheta[j] = dS_dAD.dot(dAD_dtheta)
+
+    logger.info("Average inter-subject correlation: %f" % np.mean(corrs))
 
     if compute_derivatives:
         return S, dS_dphi, dS_dtheta
