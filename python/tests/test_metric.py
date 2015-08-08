@@ -83,14 +83,6 @@ def test_metric_derivatives():
     triangles = np.random.choice(
         range(3 * n_triangles), (n_triangles, 3), replace=False)
     nbrs, num_nbrs = _calc_nbrs(triangles, n_nodes)
-    # n_nodes, max_nbrs = 100, 6
-    # nbrs = -99 * np.ones((n_nodes, max_nbrs), dtype='int')
-    # num_nbrs = np.zeros((n_nodes, ))
-    # for j in range(n_nodes):
-    #     n_nbrs = np.random.randint(1, max_nbrs+1)
-    #     nbrs[j, :n_nbrs] = np.random.choice(
-    #         range(n_nodes), (n_nbrs, ), False)
-    #     num_nbrs[j] = n_nbrs
     cart = _normalize(np.random.random((n_nodes, 3)))
     maps = np.random.choice(range(3), (n_nodes, ), True)
 
@@ -112,8 +104,6 @@ def test_metric_derivatives():
         md = _calc_metric_dist(cart2, nbrs, num_nbrs)
         M2 = np.sum((md - orig_md)**2)
         dM_dphi2[i] = (M2 - M) / delta
-        # M2 = _calc_metric_terms(nbrs, cart2, maps, orig_md, False)
-        # dM_dphi2[i] = (M2 - M) / delta
         spher2[i, 0] = spher[i, 0]
         spher2[i, 1] += delta
         cart2 = _calc_cart_coords(spher2, maps)
@@ -121,52 +111,5 @@ def test_metric_derivatives():
         dM_dtheta2[i] = (M2 - M) / delta
         spher2[i, 1] = spher[i, 1]
     atol, rtol = 1e-5, 1e-5
-    # from scipy import stats
-    # print stats.pearsonr(dM_dphi, dM_dphi2)
-    # print stats.pearsonr(dM_dtheta, dM_dtheta2)
     assert_allclose(dM_dphi, dM_dphi2, atol=atol, rtol=rtol)
     assert_allclose(dM_dtheta, dM_dtheta2, atol=atol, rtol=rtol)
-
-    # spher = _calc_spher_coords(cart, maps)
-    # delta = 1e-10
-    # spher[0, 0] += delta
-    # cart2 = _calc_cart_coords(spher, maps)
-    # M2 = _calc_metric_terms(nbrs, cart2, maps, orig_md, False)
-    # print (M2 - M) / delta
-
-    # n_nbrs = num_nbrs[0]
-    # curr_nbrs = nbrs[0, :n_nbrs]
-    # curr_cart = np.tile(cart[[0], :], (n_nbrs, 1))
-    # nbrs_cart = cart[curr_nbrs, :]
-    # gds = _calc_geodesic_dist(curr_cart, nbrs_cart)
-    # M_mat = gds - orig_md[0, :n_nbrs]
-    # m = np.tile(maps[0], (n_nbrs, ))
-    # curr_spher = _calc_spher_coords(curr_cart, m)
-    # nbrs_spher = _calc_spher_coords(nbrs_cart, m)
-    # dg_dphi, dg_dtheta = _dgds_dspher(curr_spher, nbrs_spher, gds)
-    # print np.sum(dg_dphi * M_mat), np.sum(dg_dtheta * M_mat)
-    # print dM_dphi[0], dM_dtheta[0]
-
-    # n = 4
-    # print 'phi   ', dM_dphi[:n]
-    # print 'phi2  ', dM_dphi2[:n]
-    # print 'theta ', dM_dtheta[:n]
-    # print 'theta2', dM_dtheta2[:n]
-
-    # delta = 1e-8
-    # cart2 = cart.copy()
-    # spher = _calc_spher_coords(cart, maps)
-    # dM_dphi2, dM_dtheta2 = np.zeros((n_nodes, )), np.zeros((n_nodes, ))
-    # for i in range(n_nodes):
-    #     cart2[i, :] = _calc_cart_coords(
-    #         np.array([[spher[i,0]+delta, spher[i,1]]]), maps[i])
-    #     M2 = _calc_metric_terms(nbrs, cart2, maps, orig_md, False)
-    #     dM_dphi2[i] = (M2 - M) / delta
-    #     cart2[i, :] = _calc_cart_coords(
-    #         np.array([[spher[i,0], spher[i,1]+delta]]), maps[i])
-    #     M2 = _calc_metric_terms(nbrs, cart2, maps, orig_md, False)
-    #     dM_dtheta2[i] = (M2 - M) / delta
-    #     cart2[i, :] = cart[i, :]
-    # atol, rtol = 1e-7, 1e-7
-    # # assert_allclose(dM_dphi, dM_dphi2, atol=atol, rtol=rtol)
-    # # assert_allclose(dM_dtheta, dM_dtheta2, atol=atol, rtol=rtol)
