@@ -91,7 +91,7 @@ def _calc_nbr_res(nbrs, max_res):
             new_size = len(new_nbrs)
             res_nbr_sizes[j, res] = new_size
             start, end = end, end + new_size
-            if nbrs.shape[0] < end:
+            if nbrs.shape[1] < end:
                 shape = (nbrs.shape[0], end-nbrs.shape[1])
                 nbrs = np.hstack([nbrs, -99*np.ones(shape, 'int')])
                 nbrs[j, start:end] = new_nbrs
@@ -141,16 +141,29 @@ class Surface(object):
         if self.cart_warped is None:
             self.maps = np.argmin(self.cart, axis=1)
         else:
-            self.maps = np.argmin(np.max(self.cart, self.cart_warpped), axis=1)
+            self.maps = np.argmin(np.maximum(self.cart, self.cart_warped), axis=1)
 
     def _calc_spher_coords(self):
-        self._spher = _calc_spher_coords(self.cart, self.mapping)
+        self.spher = _calc_spher_coords(self.cart, self.maps)
 
     def calc_nbr_res(self, max_res):
-        self.nbrs, self.res_nbr_sizes, self.num_nbrs = _calc_nbr_res(self.nbrs)
+        self.nbrs, self.res_nbr_sizes, self.num_nbrs = _calc_nbr_res(
+            self.nbrs, max_res)
+
+    def init_upd_nbr_res(self):
+        self.upd_nbrs = self.nbrs.copy()
+        self.upd_res_nbr_sizes = self.res_nbr_sizes.copy()
+        self.upd_num_nbrs = self.num_nbrs.copy()
 
     def update_nbr_res(self):
         _update_nbr_res(
             self.cart, self.cart_warped,
             self.nbrs, self.res_nbr_sizes, self.num_nbrs,
             self.upd_nbrs, self.upd_res_nbr_sizes, self.upd_num_nbrs)
+
+    def calc_coords_list(self):
+        self.coords_list = []
+        for i in range(3):
+            spher = _calc_spher_coords(self.cart,
+                                       i * np.ones((self.n_nodes, )))
+            self.coords_list.append(spher)
