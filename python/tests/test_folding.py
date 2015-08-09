@@ -106,3 +106,40 @@ def test_areal_terms():
     atol, rtol = 1e-6, 1e-5
     assert_allclose(dareal_dphi, dareal_dphi2, atol=atol, rtol=rtol)
     assert_allclose(dareal_dtheta, dareal_dtheta2, atol=atol, rtol=rtol)
+
+
+def test_compute_areal_terms2():
+    fname = os.path.join(DIR, 'data_for_test_compute_areal_terms.mat')
+    d = loadmat(fname)
+    triangles = d['triangles'].T
+    cart = _normalize(d['cart_coords'].T)
+    maps = d['coord_maps'].ravel() - 1
+    tri_areas = d['orig_tri_areas'].ravel()
+    tri_normals = d['tri_normals'].T
+
+    # n_triangles = triangles.shape[0]
+    n_nodes = cart.shape[0]
+    spher = _calc_spher_coords(cart, maps)
+
+    areal, dareal_dphi, dareal_dtheta = _calc_areal_terms(
+        triangles, cart, maps, tri_areas, tri_normals)
+
+    dareal_dphi2, dareal_dtheta2 = np.zeros((n_nodes, )), np.zeros((n_nodes, ))
+    spher2 = spher.copy()
+    delta = 1e-8
+    for i in range(n_nodes):
+        spher2[i, 0] += delta
+        cart2 = _calc_cart_coords(spher2, maps)
+        areal2 = _calc_areal_terms(
+            triangles, cart2, maps, tri_areas, tri_normals, False)
+        dareal_dphi2[i] = (areal2 - areal) / delta
+        spher2[i, 0] = spher[i, 0]
+        spher2[i, 1] += delta
+        cart2 = _calc_cart_coords(spher2, maps)
+        areal2 = _calc_areal_terms(
+            triangles, cart2, maps, tri_areas, tri_normals, False)
+        dareal_dtheta2[i] = (areal2 - areal) / delta
+        spher2[i, 1] = spher[i, 1]
+    atol, rtol = 1e-4, 1e-4
+    assert_allclose(dareal_dphi, dareal_dphi2, atol=atol, rtol=rtol)
+    assert_allclose(dareal_dtheta, dareal_dtheta2, atol=atol, rtol=rtol)

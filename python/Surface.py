@@ -137,7 +137,7 @@ class Surface(object):
         self.warp_cart = None
         self.cart_warped = None
 
-    def _calc_coord_maps(self):
+    def calc_coord_maps(self):
         if self.cart_warped is None:
             self.maps = np.argmin(self.cart, axis=1)
         else:

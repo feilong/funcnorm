@@ -2,8 +2,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from ..Metric import _calc_metric_terms, _calc_metric_dist, _dgds_dspher
-from ..Coordinates import _normalize, _calc_spher_coords, _calc_cart_coords, \
-    _calc_nbrs
+from ..Coordinates import _normalize, _calc_spher_coords, _calc_cart_coords
+from ..Surface import _calc_nbrs
 from ..utils import _calc_geodesic_dist
 
 import os
@@ -11,7 +11,7 @@ from scipy.io import loadmat
 DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-def _test_metric():
+def test_metric():
     n_nodes = 1000
     max_nbrs = 6
     nbrs = -99 * np.ones((n_nodes, max_nbrs), dtype='int')
@@ -64,15 +64,15 @@ def test_gds_derivatives2():
     assert_allclose(dg_dtheta, mat['dg_dtheta'].ravel())
 
 
-def _test_compute_metric_terms():
+def test_compute_metric_terms():
     fname = os.path.join(DIR, 'data_for_test_compute_metric_terms.mat')
     mat = loadmat(fname)
     md_diff, dmd_diffs_dphi, dmd_diffs_dtheta = _calc_metric_terms(
         mat['orig_nbrs'].T, mat['cart_coords'].T, mat['coord_maps'].ravel()-1,
         mat['orig_metric_distances'].T, compute_derivatives=True)
     # assert_almost_equal(md_diff, float(mat['md_diff']))
-    assert_allclose(dmd_diffs_dphi, mat['dmd_diffs_dphi'].ravel())
-    assert_allclose(dmd_diffs_dtheta, mat['dmd_diffs_dtheta'].ravel())
+    assert_allclose(dmd_diffs_dphi, mat['dmd_diffs_dphi'].ravel() * 4)
+    assert_allclose(dmd_diffs_dtheta, mat['dmd_diffs_dtheta'].ravel() * 4)
 
 
 def test_metric_derivatives():

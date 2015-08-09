@@ -49,8 +49,6 @@ def _calc_areal_terms(triangles, cart, maps, orig_tri_areas, tri_normals,
         for node in range(3):
             cI = triangles[loc, node]
             tmp = tmps[node]  # (3, )
-            # print 'foo', tmp.shape, dp_dphi.shape
-            # print cI
             dareal_dphi[cI] += np.sum(tmp * dp_dphi[cI, :])
             dareal_dtheta[cI] += np.sum(tmp * dp_dtheta[cI, :])
     return areal, dareal_dphi, dareal_dtheta
