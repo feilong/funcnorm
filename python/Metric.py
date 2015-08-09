@@ -3,8 +3,6 @@ import numpy as np
 from .utils import _calc_geodesic_dist
 from .Coordinates import _calc_spher_coords
 
-from numpy.testing import assert_allclose
-
 
 def _calc_metric_terms(nbrs, cart, maps, orig_md, compute_derivatives=True):
     n_nodes, max_nbrs = nbrs.shape
@@ -15,11 +13,9 @@ def _calc_metric_terms(nbrs, cart, maps, orig_md, compute_derivatives=True):
 
     cc = np.repeat(cart, max_nbrs, axis=0)
     nc = cart[full_nbrs.ravel(), :]
-    assert_allclose(cart[full_nbrs[0, :], :], nc[:max_nbrs, :])
 
     gds = _calc_geodesic_dist(cc, nc)
     curr_md = gds.reshape((n_nodes, max_nbrs))
-    assert_allclose(gds[:max_nbrs], curr_md[0, :])
 
     M_mat = curr_md - orig_md
     M = np.sum(M_mat**2)

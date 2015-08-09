@@ -141,7 +141,8 @@ class Surface(object):
         if self.cart_warped is None:
             self.maps = np.argmin(self.cart, axis=1)
         else:
-            self.maps = np.argmin(np.maximum(self.cart, self.cart_warped), axis=1)
+            self.maps = np.argmin(np.maximum(self.cart, self.cart_warped),
+                                  axis=1)
 
     def _calc_spher_coords(self):
         self.spher = _calc_spher_coords(self.cart, self.maps)
