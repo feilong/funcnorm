@@ -30,7 +30,7 @@ def _calc_interp_weights(spher1, spher2, res, dtype='float', zm=[],
     dA_dphi[idx] = (np.sin(phi1) * np.cos(phi2) -
                     np.cos(phi1) * np.sin(phi2) * np.cos(diff)) * tmp
     dA_dtheta[idx] = np.sin(phi1) * np.sin(phi2) * np.sin(diff) * tmp
-    return weights, non_zero, dA_dphi, dA_dtheta
+    return weights, non_zero, dA_dphi[idx], dA_dtheta[idx]
 
 
 def _blur_dataset_full(ds, cart, nbrs, num_nbrs, res, thr=1e-8):
@@ -52,7 +52,7 @@ def _blur_dataset_full(ds, cart, nbrs, num_nbrs, res, thr=1e-8):
     return Q
 
 
-def _calc_correlation_cost(ds1, ds2, coords_list, coord_maps, spher_warped,
+def _calc_correlation_cost(ds1, ds2, coords_list, maps, spher_warped,
                            nbrs, num_nbrs, res, thr=1e-8, dtype='float',
                            compute_derivatives=True):
     n_nodes = ds1.shape[1]
@@ -63,8 +63,8 @@ def _calc_correlation_cost(ds1, ds2, coords_list, coord_maps, spher_warped,
     corrs = []
     for j in range(n_nodes):
         curr_coords = spher_warped[[j], :]
-        curr_nbrs = nbrs[:num_nbrs[j], j]
-        nbr_coords = coords_list[coord_maps[j]][curr_nbrs, :]
+        curr_nbrs = nbrs[j, :num_nbrs[j]]
+        nbr_coords = coords_list[maps[j]][curr_nbrs, :]
         returns = _calc_interp_weights(
             curr_coords, nbr_coords, res,
             compute_derivatives=compute_derivatives)
@@ -83,6 +83,7 @@ def _calc_correlation_cost(ds1, ds2, coords_list, coord_maps, spher_warped,
             continue
         dA_dphi, dA_dtheta = returns[2:]
         Q_ds1 = Q.dot(ds1[:, curr_nbrs])
+        # print non_zero, Q_ds1.shape, dA_dphi.shape
         dAD_dphi = D * (dA_dphi - D * Q_ds1.dot(dA_dphi) * A)
         dAD_dtheta = D * (dA_dtheta - D * Q_ds1.dot(dA_dtheta) * A)
         dS_dAD = -ds2[:, j].dot(ds1[:, curr_nbrs])
