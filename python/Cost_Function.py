@@ -7,7 +7,7 @@ from .Folding import _calc_areal_terms
 
 
 def cost_func(spher_warp, surf, res,
-              lambda_metric, lambda_areal, orig_md, tri_areas, tri_normals,
+              lambda_metric, lambda_areal,
               ds1, ds2, compute_g=True, dtype='float'):
     spher_warp = spher_warp.reshape((surf.n_nodes, 2)).astype(dtype)
     surf.cart_warped = _calc_cart_warped_from_spher_warp(
@@ -34,7 +34,7 @@ def cost_func(spher_warp, surf, res,
     if lambda_metric > 0:
         returns = _calc_metric_terms(
             surf.nbrs, surf.cart_warped, surf.maps,
-            orig_md, compute_derivatives=compute_g)
+            surf.orig_md, compute_derivatives=compute_g)
         if compute_g:
             M, dM_dphi, dM_dtheta = returns
             g[:, 0] += lambda_metric * dM_dphi
@@ -46,7 +46,7 @@ def cost_func(spher_warp, surf, res,
     if lambda_areal > 0:
         returns = _calc_areal_terms(
             surf.triangles, surf.cart_warped, surf.maps,
-            tri_areas, tri_normals, compute_derivatives=compute_g)
+            surf.tri_areas, surf.tri_normals, compute_derivatives=compute_g)
         if compute_g:
             areal, dareal_dphi, dareal_dtheta = returns
             g[:, 0] += lambda_areal * dareal_dphi
@@ -56,5 +56,5 @@ def cost_func(spher_warp, surf, res,
         f += lambda_areal * areal
 
     if compute_g:
-        return f, g
+        return f, g.ravel()
     return f

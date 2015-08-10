@@ -33,14 +33,22 @@ def _calc_interp_weights(spher1, spher2, res, dtype='float', zm=[],
     return weights, non_zero, dA_dphi[idx], dA_dtheta[idx]
 
 
+def _gds_to_interp_weights(gds, res):
+    h = 0.0201 * res
+    non_zero = np.where(gds < 2 * np.arcsin(h/2))[0]
+    s = 2 * np.sin(gds[non_zero]/2) / h
+    weights = (1 - s)**4 * (4*s + 1)
+    return weights, non_zero
+
+
 def _blur_dataset_full(ds, cart, nbrs, num_nbrs, res, thr=1e-8):
     Q = np.zeros(ds.shape, ds.dtype)
     for i in range(ds.shape[1]):
         curr_cart = cart[[i], :]
         curr_nbrs = nbrs[i, :num_nbrs[i]]
         nbr_cart = cart[curr_nbrs, :]
-        gds = _calc_geodesic_dist(curr_cart, nbr_cart)  # TODO
-        A, non_zero = _calc_interp_weights(gds, res)
+        gds = _calc_geodesic_dist(curr_cart, nbr_cart)
+        A, non_zero = _gds_to_interp_weights(gds, res)
         # A = A[non_zero]
         curr_nbrs = curr_nbrs[non_zero]
         Q[:, i] = ds[:, curr_nbrs].dot(A)

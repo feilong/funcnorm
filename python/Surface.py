@@ -1,6 +1,11 @@
 import numpy as np
 
-from .Coordinates import _calc_spher_coords
+from .Coordinates import _calc_spher_coords, _normalize
+from .Metric import _calc_metric_dist
+from .Folding import _calc_oriented_areas
+from .Interpolation import _calc_geodesic_dist, _gds_to_interp_weights
+from .Coordinates import _calc_spher_warp_from_cart_warp, \
+    _calc_cart_warped_from_spher_warp
 
 
 def _calc_nbrs(triangles, n_nodes, max_nbrs=6):
@@ -92,9 +97,9 @@ def _calc_nbr_res(nbrs, max_res):
             res_nbr_sizes[j, res] = new_size
             start, end = end, end + new_size
             if nbrs.shape[1] < end:
-                shape = (nbrs.shape[0], end-nbrs.shape[1])
+                shape = (n_nodes, end-nbrs.shape[1])
                 nbrs = np.hstack([nbrs, -99*np.ones(shape, 'int')])
-                nbrs[j, start:end] = new_nbrs
+            nbrs[j, start:end] = new_nbrs
     num_nbrs = np.sum(nbrs != -99, axis=1)
     return nbrs, res_nbr_sizes, num_nbrs
 
@@ -131,8 +136,10 @@ class Surface(object):
         self.cart = cart
         self.nbrs = nbrs
         self.triangles = triangles
+        self.num_nbrs = np.sum(nbrs != -99, axis=1)
 
         self.n_nodes = cart.shape[0]
+        self.n_triangles = triangles.shape[0]
 
         self.warp_cart = None
         self.cart_warped = None
@@ -143,6 +150,7 @@ class Surface(object):
         else:
             self.maps = np.argmin(np.maximum(self.cart, self.cart_warped),
                                   axis=1)
+        self._calc_spher_coords()
 
     def _calc_spher_coords(self):
         self.spher = _calc_spher_coords(self.cart, self.maps)
@@ -168,3 +176,56 @@ class Surface(object):
             spher = _calc_spher_coords(self.cart,
                                        i * np.ones((self.n_nodes, )))
             self.coords_list.append(spher)
+
+    def normalize_cart(self):
+        self.cart = _normalize(self.cart)
+
+    def init_metric(self, dtype='float'):
+        self.orig_md = _calc_metric_dist(self.cart, self.nbrs, self.num_nbrs,
+                                         dtype)
+
+    def init_areal(self):
+        self.tri_areas, self.tri_normals = _calc_oriented_areas(
+            self.triangles, self.cart)
+
+    def trim_nbrs(self):
+        self.num_nbrs -= self.res_nbr_sizes[:, -1]
+        self.upd_num_nbrs -= self.upd_res_nbr_sizes[:, -1]
+        self.res_nbr_sizes = self.res_nbr_sizes[:, :-1]
+        self.upd_res_nbr_sizes = self.upd_res_nbr_sizes[:, :-1]
+        # max_nbrs = max(self.num_nbrs.max(), self.upd_num_nbrs.max())
+        max_nbrs = self.num_nbrs.max()
+        self.nbrs = self.nbrs[:, :max_nbrs]
+        self.upd_nbrs = self.upd_nbrs[:, :max_nbrs]
+        for i in range(self.n_nodes):
+            self.nbrs[i, self.num_nbrs[i]:] = -99
+            self.upd_nbrs[i, self.upd_num_nbrs[i]:] = -99
+
+    def calc_spher_warp(self, cart_warp):
+        spher_warp = _calc_spher_warp_from_cart_warp(
+            self.cart, cart_warp, self.maps, self.spher)
+        return spher_warp
+
+    def calc_cart_warped(self, spher_warp):
+        self.cart_warped = _calc_cart_warped_from_spher_warp(
+            self.cart, spher_warp, self.maps, self.spher)
+
+    def calc_avg_corr(self, ds1, ds2, res, thr=1e-8):
+        corrs = []
+        for j in range(self.n_nodes):
+            curr_coords = self.cart_warped[[j], :]
+            curr_nbrs = self.nbrs[j, :self.num_nbrs[j]]
+            nbr_coords = self.cart[curr_nbrs, :]
+            gds = _calc_geodesic_dist(curr_coords, nbr_coords)
+            A, non_zero = _gds_to_interp_weights(gds, res)
+            curr_nbrs = curr_nbrs[non_zero]
+            Q = ds1[:, curr_nbrs].dot(A)
+            qnorm = np.linalg.norm(Q)
+            print qnorm,
+            if qnorm < thr:
+                continue
+            D = 1.0 / qnorm
+            Q *= D
+            corr = ds2[:, j].dot(Q)
+            corrs.append(corr)
+        return corrs
