@@ -4,13 +4,16 @@ from .utils import random_dataset, random_triangles, random_cart
 
 from ..Register import funcnorm_register
 from ..Surface import Surface
+from ..config_logging import config_logging
+
+config_logging()
 
 
 def test_funcnorm_register():
     np.random.seed(0)
-    n_triangles = 300
-    n_nodes = 100
-    n_timepoints = 30
+    n_triangles = 3000
+    n_nodes = 1000
+    n_timepoints = 300
     res = 2
     triangles, nbrs, num_nbrs = random_triangles(n_nodes, n_triangles)
     cart = random_cart(n_nodes)

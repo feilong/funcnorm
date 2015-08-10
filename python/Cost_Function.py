@@ -1,9 +1,12 @@
 import numpy as np
+import logging
 
 from .Coordinates import _calc_cart_warped_from_spher_warp, _calc_spher_coords
 from .Interpolation import _calc_correlation_cost
 from .Metric import _calc_metric_terms
 from .Folding import _calc_areal_terms
+
+logger = logging.getLogger('funcnorm')
 
 
 def cost_func(spher_warp, surf, res,
@@ -24,11 +27,11 @@ def cost_func(spher_warp, surf, res,
         ds1, ds2, surf.coords_list, surf.maps, surf.spher_warped,
         surf.nbrs, surf.num_nbrs, res, compute_derivatives=compute_g)
     if compute_g:
-        S, dS_dphi, dS_dtheta = returns
+        S, corrs, dS_dphi, dS_dtheta = returns
         g[:, 0] += multi_intersubj * dS_dphi
         g[:, 1] += multi_intersubj * dS_dtheta
     else:
-        S = returns
+        S, corrs = returns
     f = multi_intersubj * S
 
     if lambda_metric > 0:
@@ -54,6 +57,8 @@ def cost_func(spher_warp, surf, res,
         else:
             areal = returns
         f += lambda_areal * areal
+
+    logger.info("Mean correlation: %5.3f,  Cost: %6.3f" % (np.mean(corrs), f))
 
     if compute_g:
         return f, g.ravel()

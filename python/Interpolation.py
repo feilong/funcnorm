@@ -1,9 +1,6 @@
 import numpy as np
-import logging
 
 from .utils import _calc_geodesic_dist
-
-logger = logging.getLogger('funcnorm')
 
 
 def _calc_interp_weights(spher1, spher2, res, dtype='float', zm=[],
@@ -97,10 +94,9 @@ def _calc_correlation_cost(ds1, ds2, coords_list, maps, spher_warped,
         dS_dAD = -ds2[:, j].dot(ds1[:, curr_nbrs])
         dS_dphi[j] = dS_dAD.dot(dAD_dphi)
         dS_dtheta[j] = dS_dAD.dot(dAD_dtheta)
-    logger.info("Average inter-subject correlation: %f" % np.mean(corrs))
     if compute_derivatives:
-        return S, dS_dphi, dS_dtheta
-    return S
+        return S, corrs, dS_dphi, dS_dtheta
+    return S, corrs
 
 
 # """
