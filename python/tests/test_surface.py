@@ -2,14 +2,17 @@ import os
 import numpy as np
 from nose.tools import assert_equal, assert_true
 from numpy.testing import assert_array_equal
+from scipy.io import loadmat
+import logging
 
 from ..Coordinates import _normalize
 from ..Surface import _calc_nbrs, _calc_nbr_res, _update_nbr_res
 
 DIR = os.path.dirname(os.path.realpath(__file__))
+logger = logging.getLogger('funcnorm')
 
 
-def test_calc_nbr_res():
+def _test_calc_nbr_res():
     n_triangles, max_res = 300, 6
     n_nodes = n_triangles * 3
     triangles = np.random.choice(range(n_nodes), (n_triangles, 3), False)
@@ -22,7 +25,21 @@ def test_calc_nbr_res():
     assert_true(np.all(num_nbrs == num_nbrs0 + 1))
 
 
-def test_update_nbr_res():
+def test_compare_nbr_res():
+    mat_file = os.path.join(DIR, '..', '..', 'results',
+                            'standard2mm_sphere.reg.mat')
+    if not os.path.exists(mat_file):
+        logger.warn('Data file not found. Skipping test...')
+        return
+    mat = loadmat(mat_file)
+    nbrs, res_nbr_sizes, num_nbrs = _calc_nbr_res(
+        mat['coords']['neighbors'][0, 0].T, 6)
+    assert_array_equal(nbrs, mat['nbrs'].T)
+    assert_array_equal(res_nbr_sizes, mat['res_nbr_sizes'].T)
+    assert_array_equal(num_nbrs, mat['num_nbrs'].ravel())
+
+
+def _test_update_nbr_res():
     n_triangles, max_res = 300, 6
     n_nodes = n_triangles * 3
     cart = _normalize(np.random.random((n_nodes, 3)))

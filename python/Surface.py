@@ -50,7 +50,7 @@ def surf_from_file(surf_file, dtype='float', max_nbrs=6):
     return surf
 
 
-def _calc_nbr_res0(orig_nbrs, max_res):
+def _calc_nbr_res(orig_nbrs, max_res):
     n_nodes, max_nbrs = orig_nbrs.shape
     nbrs = -99 * np.ones((n_nodes, min(max_nbrs+1, 200)), dtype='int')
     res_nbr_sizes = np.zeros((n_nodes, max_res), dtype='int')
@@ -60,38 +60,12 @@ def _calc_nbr_res0(orig_nbrs, max_res):
             nbrs[j, :n_nbrs] = orig_nbrs[j, :n_nbrs]
         else:
             n_nbrs += 1
-            nbrs[j, :n_nbrs] = [j] + orig_nbrs[j, :n_nbrs].tolist()
+            nbrs[j, :n_nbrs] = [j] + orig_nbrs[j, :n_nbrs-1].tolist()
         res_nbr_sizes[j, 0] = n_nbrs
         start, end = 1, n_nbrs
         for res in range(1, max_res):
             prev_nbrs = nbrs[j, start:end]
-            nbrs_nbrs = np.setdiff_1d(orig_nbrs[prev_nbrs, :], [-99])
-            new_nbrs = np.setdiff_1d(nbrs_nbrs, nbrs[j, :end])
-            new_size = len(new_nbrs)
-            res_nbr_sizes[j, res] = new_size
-            start, end = end, end + new_size
-            if nbrs.shape[0] < end:
-                shape = (nbrs.shape[0], end-nbrs.shape[1])
-                nbrs = np.hstack([nbrs, -99*np.ones(shape, 'int')])
-                nbrs[j, start:end] = new_nbrs
-    num_nbrs = np.sum(nbrs != -99, axis=1)
-    return nbrs, res_nbr_sizes, num_nbrs
-
-
-def _calc_nbr_res(nbrs, max_res):
-    n_nodes, max_nbrs = nbrs.shape
-    res_nbr_sizes = np.zeros((n_nodes, max_res), dtype='int')
-    nbrs = np.hstack([nbrs, -99 * np.ones((n_nodes, 1), 'int')])
-    for j in range(n_nodes):
-        if nbrs[j, 0] != j:
-            nbrs[j, 1:] = nbrs[j, :-1]
-            nbrs[j, 0] = j
-        n_nbrs = np.sum(nbrs[j, :] != -99)
-        res_nbr_sizes[j, 0] = n_nbrs
-        start, end = 1, n_nbrs
-        for res in range(1, max_res):
-            prev_nbrs = nbrs[j, start:end]
-            nbrs_nbrs = np.setdiff1d(nbrs[prev_nbrs, :], [-99])
+            nbrs_nbrs = np.setdiff1d(orig_nbrs[prev_nbrs, :], [-99])
             new_nbrs = np.setdiff1d(nbrs_nbrs, nbrs[j, :end])
             new_size = len(new_nbrs)
             res_nbr_sizes[j, res] = new_size
