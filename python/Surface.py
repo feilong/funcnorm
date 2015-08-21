@@ -130,6 +130,7 @@ class Surface(object):
         self.spher = _calc_spher_coords(self.cart, self.maps)
 
     def calc_nbr_res(self, max_res):
+        self.orig_nbrs = self.nbrs
         self.nbrs, self.res_nbr_sizes, self.num_nbrs = _calc_nbr_res(
             self.nbrs, max_res)
 
@@ -155,8 +156,8 @@ class Surface(object):
         self.cart = _normalize(self.cart)
 
     def init_metric(self, dtype='float'):
-        self.orig_md = _calc_metric_dist(self.cart, self.nbrs, self.num_nbrs,
-                                         dtype)
+        self.orig_md = _calc_metric_dist(self.cart, self.orig_nbrs,
+                                         self.num_nbrs, dtype)
 
     def init_areal(self):
         self.tri_areas, self.tri_normals = _calc_oriented_areas(

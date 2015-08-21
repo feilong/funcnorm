@@ -77,14 +77,20 @@ def _calc_correlation_cost(ds1, ds2, coords_list, maps, spher_warped,
         curr_nbrs = curr_nbrs[non_zero]
         Q = ds1[:, curr_nbrs].dot(A)
         qnorm = np.linalg.norm(Q)
+        # D = 0.0 if qnorm < thr else 1.0/qnorm
+        # if qnorm < thr:
+        #     D = 0
+        # D = 1.0 / qnorm
         if qnorm < thr:
-            continue
-        D = 1.0 / qnorm
-        Q *= D
-        corr = ds2[:, j].dot(Q)
-        corrs.append(corr)
-        S += 1.0 - corr
-        if not compute_derivatives:
+            S += 1.0
+            corrs.append(0.0)
+        else:
+            D = 1.0/qnorm
+            Q *= D
+            corr = ds2[:, j].dot(Q)
+            corrs.append(corr)
+            S += 1.0 - corr
+        if not compute_derivatives or qnorm < thr:
             continue
         dA_dphi, dA_dtheta = returns[2:]
         Q_ds1 = Q.dot(ds1[:, curr_nbrs])

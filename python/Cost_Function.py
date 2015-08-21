@@ -12,6 +12,7 @@ logger = logging.getLogger('funcnorm')
 def cost_func(spher_warp, surf, res,
               lambda_metric, lambda_areal,
               ds1, ds2, compute_g=True, dtype='float'):
+    logger.debug("Calculating warped coordinates.")
     spher_warp = spher_warp.reshape((surf.n_nodes, 2)).astype(dtype)
     surf.cart_warped = _calc_cart_warped_from_spher_warp(
         surf.cart, spher_warp, surf.maps, surf.spher)
@@ -19,9 +20,12 @@ def cost_func(spher_warp, surf, res,
     surf.update_nbr_res()
     surf.spher_warped = _calc_spher_coords(surf.cart_warped, surf.maps)
     surf.calc_coords_list()
+    logger.debug("Finished calculating warped coordinates.")
+
     if compute_g:
         g = np.zeros((surf.n_nodes, 2), dtype=dtype)
 
+    logger.debug("Calculating correlations across subjects.")
     multi_intersubj = 1.0
     returns = _calc_correlation_cost(
         ds1, ds2, surf.coords_list, surf.maps, surf.spher_warped,
@@ -33,10 +37,12 @@ def cost_func(spher_warp, surf, res,
     else:
         S, corrs = returns
     f = multi_intersubj * S
+    logger.debug("Finished calculating correlations across subjects.")
 
+    logger.debug("Calculating metric distortion terms.")
     if lambda_metric > 0:
         returns = _calc_metric_terms(
-            surf.nbrs, surf.cart_warped, surf.maps,
+            surf.orig_nbrs, surf.cart_warped, surf.maps,
             surf.orig_md, compute_derivatives=compute_g)
         if compute_g:
             M, dM_dphi, dM_dtheta = returns
@@ -45,7 +51,9 @@ def cost_func(spher_warp, surf, res,
         else:
             M = returns
         f += lambda_metric * M
+    logger.debug("Finished calculating metric distortion terms.")
 
+    logger.debug("Calculating folding (areal) terms.")
     if lambda_areal > 0:
         returns = _calc_areal_terms(
             surf.triangles, surf.cart_warped, surf.maps,
@@ -57,8 +65,12 @@ def cost_func(spher_warp, surf, res,
         else:
             areal = returns
         f += lambda_areal * areal
+    logger.debug("Finished calculating folding (areal) terms.")
 
-    logger.info("Mean correlation: %5.3f,  Cost: %6.3f" % (np.mean(corrs), f))
+    logger.info("Avg Corr: %7.5f, Avg R^2: %7.5f, Corr Cost: %5.3f, "
+                "Metric: %5.3f, Areal: %5.3f, Total Cost: %6.3f" % (
+                    np.mean(corrs), np.mean(np.array(corrs)**2), S * multi_intersubj,
+                    M * lambda_metric, areal * lambda_areal, f))
 
     if compute_g:
         return f, g.ravel()
