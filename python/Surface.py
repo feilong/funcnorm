@@ -204,3 +204,23 @@ class Surface(object):
             corr = ds2[:, j].dot(Q)
             corrs.append(corr)
         return corrs
+
+    def multi_hem(self, n_hems):
+        n_nodes_per_hem = self.n_nodes
+        n_triangles_per_hem = self.n_triangles
+
+        self.cart = np.tile(self.cart, (n_hems, 1))
+        self.triangles = np.tile(self.triangles, (n_hems, 1))
+        self.num_nbrs = np.tile(self.num_nbrs, (n_hems, ))
+
+        self.n_nodes = self.cart.shape[0]
+        self.n_triangles = self.triangles.shape[0]
+
+        for hem_num in range(1, n_hems):
+            nbrs = self.nbrs[:n_nodes_per_hem, :]
+            nbrs[np.where(nbrs != -99)] += n_nodes_per_hem * hem_num
+            self.nbrs = np.hstack([self.nbrs, nbrs])
+
+            self.triangles += (np.tile(
+                np.array(range(self.n_triangles))[:, np.newaxis],
+                (1, 3)) / n_triangles_per_hem) * n_triangles_per_hem

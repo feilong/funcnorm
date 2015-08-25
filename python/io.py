@@ -35,7 +35,7 @@ def load_time_series(filename, in_dtype='f4', out_dtype=None):
         idx = line.find('>')
         f.seek(line_start + idx + 1, 0)
 
-        logger.info('Loading binary data, endian: {endian}, '
+        logger.debug('Loading binary data, endian: {endian}, '
                     'dtype: {in_dtype}, '
                     'shape: ({n_timepoints}, {n_nodes})'.format(**locals()))
 

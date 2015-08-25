@@ -31,11 +31,14 @@ def funcnorm_register(warp_ds, template_ds, surf, cart_warp,
     logger.info('Finished initializing surface.')
 
     if lambda_metric > 0:
-        lambda_metric /= 4.0 * surf.n_nodes
+        # lambda was multiplied by n_nodes in funcnorm.m and divided by n_nodes
+        # in funcnorm_register.m, which is redundant.  I removed those
+        # unnecessary parts.
+        # lambda_metric /= 4.0 * surf.n_nodes
         surf.init_metric(warp_ds.dtype)
 
     if lambda_areal > 0:
-        lambda_areal /= 2.0 * surf.n_triangles
+        # lambda_areal /= 2.0 * surf.n_triangles
         surf.init_areal()
 
     surf.init_upd_nbr_res()
