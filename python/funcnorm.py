@@ -176,6 +176,35 @@ def _load_tmp_time_series(subj, hems, dirs):
     return np.hstack(time_series)
 
 
+def calc_warp(pass_num, subj_num, subj,
+              surf, subjects, hems, dirs,
+              lambda_metric, lambda_areal, max_res):
+    if pass_num == 0 and subj_num == 0:
+        _save_warp(np.zeros((surf.n_nodes, 3)), subj, hems, 0, 0, dirs)
+        # TS = load_orig_time_series(subj, hems)
+        # _save_tmp_time_series(TS, subj, hems, dirs)
+        return
+    logger.info("Creating atlas for alignment.")
+    atlas_subj = range(len(subjects)) if pass_num > 0 else range(subj_num)
+    atlas_TS = np.array(
+        [_load_tmp_time_series(subjects[j], hems, dirs)
+         for j in atlas_subj if j != subj_num]
+        ).mean(axis=0)
+    logger.info("Completed creating atlas for alignment.")
+
+    # TODO separate logging file
+    TS = load_orig_time_series(subj, hems)
+    logger.info("Performing alignment of subject #{subj_num} ({subj}) "
+                "on pass #{pass_num}".format(**locals()))
+    warp = np.zeros((surf.n_nodes, 3)) if pass_num == 0 else \
+           _load_warp(subj, hems, pass_num-1, pass_num>1, dirs)
+    warp = funcnorm_register(TS, atlas_TS, surf, warp,
+                             lambda_metric, lambda_areal, max_res)
+    logger.info("Completed alignment of subject #{subj_num} ({subj}) "
+                "on pass #{pass_num}".format(**locals()))
+    _save_warp(warp, subj, hems, pass_num, 0, dirs)
+
+
 def funcnorm():
     """
     nbrs: (36002, 6)
@@ -215,52 +244,29 @@ def funcnorm():
     # BUG? Matlab version used n_nodes in funcnorm but n_triangles in
     # funcnorm_register, which is pretty weird.
 
-    pass_num, subj_num = determine_start_point(n_passes, subjects, hems, dirs)
+    # pass_num, subj_num = determine_start_point(n_passes, subjects, hems, dirs)
+    pass_num, subj_num = 0, 0
     logger.info("Starting with pass #{pass_num} and subject #{subj_num}".format(**locals()))
 
     for pass_num in range(pass_num, n_passes):
         logger.info("Running through pass #%d..." % pass_num)
         for subj_num in range(subj_num, len(subjects)):
             subj = subjects[subj_num]
-            if pass_num == 0 and subj_num == 0:
-                _save_warp(np.zeros((surf.n_nodes, 3)), subj, hems, 0, 0, dirs)
-                atlas_TS = load_orig_time_series(subj, hems)
-                _save_tmp_time_series(atlas_TS, subj, hems, dirs)
-                continue
-            logger.info("Creating atlas for alignment.")
-            if pass_num == 0:
-                atlas_TS = np.array(
-                    [_load_tmp_time_series(subjects[j], hems, dirs)
-                     for j in range(subj_num)]
-                ).mean(axis=0)
-            else:
-                atlas_TS = np.array(
-                    [_load_tmp_time_series(subjects[j], hems, dirs)
-                     for j in range(len(subjects)) if j != subj_num]
-                ).mean(axis=0)
-            logger.info("Completed creating atlas for alignment.")
+            warp_exists = _check_warp_file_exists(subj, hems, pass_num, 0, dirs)
+            if not warp_exists:
+                calc_warp(pass_num, subj_num, subj, surf, subjects, hems, dirs,
+                          lambda_metric, lambda_areal, max_res)
 
-            # TODO separate logging file
+            warp = _load_warp(subj, hems, pass_num, 0, dirs)
             TS = load_orig_time_series(subj, hems)
-            logger.info("Performing alignment of subject #{subj_num} ({subj}) "
-                        "on pass #{pass_num}".format(**locals()))
-            if pass_num == 0:
-                warp = np.zeros((surf.n_nodes, 3))
-            else:
-                warp = _load_warp(subj, pass_num-1, pass_num>1)
-            warp = funcnorm_register(TS, atlas_TS, surf, warp,
-                                     lambda_metric, lambda_areal, max_res)
-            logger.info("Completed alignment of subject #{subj_num} ({subj}) "
-                        "on pass #{pass_num}".format(**locals()))
-            _save_warp(warp, subj, hems, pass_num, 0, dirs)
-            TS = surf.interp_time_series(TS, False)
+            if subj_num > 0 or pass_num > 0:
+                TS = surf.interp_time_series(warp, TS, False)
             surf.clean_up()
             _save_tmp_time_series(TS, subj, hems, dirs)
-            if pass_num == 0:
-                atlas_TS += TS
         if pass_num > 0:
             logger.info("Zero correcting the warps...")
-            warps = [_load_warp(subj, pass_num, 0) for subj in subjects]
+            warps = [_load_warp(subj, hems, pass_num, 0, dirs)
+                     for subj in subjects]
             warps_zero = compute_zero_correction(surf, warps)
             for subj_num, subj in enumerate(subjects):
                 _save_warp(warps_zero[subj_num], subj, hems, pass_num, 1, dirs)

@@ -60,13 +60,18 @@ def _blur_dataset_full(ds, cart, nbrs, num_nbrs, res, thr=1e-8):
     return Q
 
 
-def _interp_time_series(T, surf, nn=False):
+def _interp_time_series(T, cart_warp, surf, nn=False):
     n_nodes = T.shape[1]
     TW = np.zeros(T.shape)
     nbrs = np.hstack([np.arange(n_nodes)[:, np.newaxis], surf.orig_nbrs])
     num_nbrs = np.sum(nbrs != -99, axis=1)
+    cart_warped = surf.cart + cart_warp
     for j in range(n_nodes):
-        curr_cart = surf.cart_warped[j, :]
+        # if j == 36104:
+        #     projections = surf.cart.dot(cart_warped[j, :])
+        #     idx = np.argsort(projections)[::-1]
+        #     gds = _calc_geodesic_dist(cart_warped[[j], :], surf.cart[idx[:3], :])
+        curr_cart = cart_warped[j, :]
         curr_nbrs = nbrs[j, :num_nbrs[j]]
         nbrs_cart = surf.cart[curr_nbrs, :]
         prev_nbr = j - 1
@@ -87,9 +92,17 @@ def _interp_time_series(T, surf, nn=False):
         gds = _calc_geodesic_dist(curr_cart[np.newaxis, :], tri_cart)
         weights, non_zero = _gds_to_interp_weights(gds, 1)
         if len(non_zero) == 0:
+            logger.error("Coordinates: %r %r" % (curr_cart, tri_cart))
             logger.error("Geodesic distances: %r" % gds)
+            sin_gds = np.sqrt(
+                    (np.cross(curr_cart[np.newaxis, :], tri_cart)**2).sum(axis=1)
+                )
+            logger.error("sin(gds): %r" % sin_gds)
+            logger.error("gds: %r" % np.arcsin(sin_gds))
+            logger.error("dtype: %r" % surf.cart.dtype)
+            logger.error("Neighbors: %r" % tri_nbrs)
             raise ValueError("No neighbors found for node #%d %r after "
-                             "warping." % (j, surf.cart_warped[j, :]))
+                             "warping." % (j, cart_warped[j, :]))
         elif len(non_zero) == 1:
             TW[:, j] = T[:, [tri_nbrs[non_zero]]].dot(weights).ravel()
         else:

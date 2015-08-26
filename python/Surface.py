@@ -106,13 +106,13 @@ def _update_nbr_res(cart, cart_warped, nbrs, res_nbr_sizes, num_nbrs,
 
 
 class Surface(object):
-    # TODO: clean up surface after each alignment
     def __init__(self, cart, nbrs, triangles):
         """
         Try using (n_nodes, 3) arrays for cart.
         Try using coord_maps with [0, 1, 2]
         """
         self.cart = cart
+        self.orig_nbrs = nbrs
         self.nbrs = nbrs
         self.triangles = triangles
         self.num_nbrs = np.sum(nbrs != -99, axis=1)
@@ -124,11 +124,12 @@ class Surface(object):
 
     def clean_up(self):
         self.nbrs = self.orig_nbrs
-        self.num_nbrs = np.sum(nbrs != -99, axis=1)
-        del self.res_nbr_sizes
-        del self.upd_nbrs, upd_num_nbrs, upd_res_nbr_sizes
+        self.num_nbrs = np.sum(self.nbrs != -99, axis=1)
+        if hasattr(self, 'res_nbr_sizes'):
+            del self.res_nbr_sizes
+            del self.upd_nbrs, upd_num_nbrs, upd_res_nbr_sizes
 
-        del self.cart_warped, self.maps
+            del self.cart_warped, self.maps
 
         logger.debug("Completed cleaning up Surface, remaining keys: %s" %
                      ', '.join(self.__dict__.keys()))
@@ -145,7 +146,6 @@ class Surface(object):
         self.spher = _calc_spher_coords(self.cart, self.maps)
 
     def calc_nbr_res(self, max_res):
-        self.orig_nbrs = self.nbrs
         self.nbrs, self.res_nbr_sizes, self.num_nbrs = _calc_nbr_res(
             self.nbrs, max_res)
 
@@ -244,6 +244,7 @@ class Surface(object):
             nbrs = self.nbrs[:n_nodes_per_hem, :]
             nbrs[np.where(nbrs != -99)] += n_nodes_per_hem * hem_num
             self.nbrs = np.vstack([self.nbrs, nbrs])
+        self.orig_nbrs = self.nbrs
 
         self.triangles += (
             np.tile(np.array(range(self.n_triangles))[:, np.newaxis], (1, 3))
@@ -258,5 +259,5 @@ class Surface(object):
                                triangles=self.triangles.max(),
                                num_nbrs=self.num_nbrs.max()))
 
-    def interp_time_series(self, T, nn=False):
-        return _interp_time_series(T, self, nn)
+    def interp_time_series(self, cart_warp, T, nn=False):
+        return _interp_time_series(T, cart_warp, self, nn)
