@@ -3,6 +3,10 @@ import logging.config
 
 mapping = [[0, 1, 2], [1, 2, 0], [2, 1, 0]]
 
+gds_const = 0.0220493478005
+# min: 0.015044525083, mean: 0.020051620128, max: 0.0220493478005
+# Here we use the maximum, otherwise some neighbors might get excluded.
+
 
 def _calc_geodesic_dist(coords1, coords2):
     if coords1.shape[1] != coords2.shape[1]:

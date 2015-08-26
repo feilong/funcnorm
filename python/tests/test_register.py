@@ -4,9 +4,9 @@ from .utils import random_dataset, random_triangles, random_cart
 
 from ..Register import funcnorm_register
 from ..Surface import Surface
-from ..config_logging import config_logging
+from ..utils import init_logging
 
-config_logging()
+init_logging()
 
 
 def test_funcnorm_register():

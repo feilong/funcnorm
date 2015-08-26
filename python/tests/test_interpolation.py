@@ -1,9 +1,27 @@
+import os
 import numpy as np
 from numpy.testing import assert_allclose
 
-from ..Interpolation import _calc_correlation_cost
+from ..Interpolation import _calc_correlation_cost, _interp_time_series
 from ..Coordinates import _normalize, _calc_spher_coords
-from ..Surface import _calc_nbrs
+from ..Surface import _calc_nbrs, surf_from_file
+
+DIR = os.path.dirname(os.path.realpath(__file__))
+
+
+def test_interp_time_series():
+    fname = os.path.join(DIR, os.pardir, os.pardir, 'results',
+                         'standard2mm_sphere.reg.asc')
+    if not os.path.exists(fname):
+        print 'Surface file not found. Skipping test...'
+    surf = surf_from_file(fname)
+    surf.normalize_cart()
+    T = np.random.random((100, surf.n_nodes))
+    surf.cart_warped = surf.cart
+    surf.orig_nbrs = surf.nbrs
+    TW = _interp_time_series(T, surf, True)
+    assert_allclose(T, TW)
+    _interp_time_series(T, surf, False)
 
 
 def test_calc_correlation_cost():

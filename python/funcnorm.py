@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import logging
+from scipy.io import loadmat, savemat
 
 from .utils import init_logging
 from .Surface import surf_from_file
@@ -36,7 +37,7 @@ def load_orig_time_series(subj, hems):
     return Ts
 
 
-def determine_subj_ordering(subjects, hems):
+def determine_subj_ordering(subjects, hems, dirs):
     """
     Notes
     -----
@@ -44,6 +45,12 @@ def determine_subj_ordering(subjects, hems):
     The first subject might get changed in the last part.
     Probably we should improve it in the future.
     """
+    cache_file = os.path.join(dirs['align'], 'subject_order.mat')
+    if os.path.exists(cache_file):
+        logger.info("Found existing subject order file, skip calculation...")
+        mat = loadmat(cache_file)
+        print tuple(mat['shape'].ravel())
+        return mat['subjects'], mat['shape'].ravel()
     logger.info("Determining the order of subjects...")
     logger.info("Original order of subjects is: %r" % subjects)
     datasets = {}
@@ -82,6 +89,7 @@ def determine_subj_ordering(subjects, hems):
     subjects3 = [subjects2[_] for _ in idx]
     logger.info("Order of subjects by correlation with atlas: " + \
                  ', '.join(subjects3))
+    savemat(cache_file, {'subjects': subjects3, 'shape': atlas.shape})
     return subjects3, atlas.shape
 
 
@@ -96,23 +104,12 @@ def _check_warp_completed(subjects, hems, dirs):
     return True
 
 
-def _check_warp_file_exists(subj, hems, pass_num, dirs):
-    zero_corrected = False
-    corr_str = '_corrected' if zero_corrected else ''
-    for hem in hems:
-        warp_file = os.path.join(
-            dirs['tmp'],
-            'warp_{subj}_{hem}_{pass_num}{corr_str}.bin'.format(**locals()))
-        if not os.path.exists(warp_file):
-            return False
-    return True
-
-
 def determine_start_point(n_passes, subjects, hems, dirs):
     for hem in hems:
         hem_out_dir = os.path.join(dirs['warps'], hem)
         if not os.path.exists(hem_out_dir):
             os.makedirs(hem_out_dir)
+    n_subjects = len(subjects)
     start_pass = 0
     start_subj = 0
     n_subj = len(subjects)
@@ -121,14 +118,65 @@ def determine_start_point(n_passes, subjects, hems, dirs):
         exit(0)
     for pass_num in range(n_passes):
         for subj_num, subj in enumerate(subjects):
-            if not _check_warp_file_exists(subj, hems, pass_num, dirs):
+            if not _check_warp_file_exists(subj, hems, pass_num, 0, dirs):
                 logger.info("The algorithm will start on pass #{pass_num} "
                             "and subject #{subj_num} ({subj}) out of "
                             "{n_subjects}".format(**locals()))
                 return pass_num, subj_num
 
 
-def test_funcnorm():
+def _get_warp_filename(subj, hem, pass_num, zero_corrected, dirs):
+    corr_str = '_corrected' if zero_corrected else ''
+    return os.path.join(
+        dirs['tmp'],
+        'warp_{subj}_{hem}_{pass_num}{corr_str}.mat'.format(**locals()))
+
+
+def _save_warp(warp, subj, hems, pass_num, zero_corrected, dirs):
+    nph = warp.shape[0] / len(hems)
+    for num_hem, hem in enumerate(hems):
+        warp_data = warp[num_hem*nph:(num_hem+1)*nph, :]
+        fname = _get_warp_filename(subj, hem, pass_num, zero_corrected, dirs)
+        savemat(fname, {'warp': warp_data})
+
+
+def _load_warp(subj, hems, pass_num, zero_corrected, dirs):
+    warps = []
+    for hem in hems:
+        fname = _get_warp_filename(subj, hem, pass_num, zero_corrected, dirs)
+        warps.append(loadmat(fname)['warp'])
+    return np.vstack(warps)
+
+
+def _check_warp_file_exists(subj, hems, pass_num, zero_corrected, dirs):
+    for hem in hems:
+        fname = _get_warp_filename(subj, hem, pass_num, zero_corrected, dirs)
+        if not os.path.exists(fname):
+            return False
+    return True
+
+
+def _get_tmp_time_series_filename(subj, hem, dirs):
+    return os.path.join(dirs['tmp'], '{subj}_{hem}.mat'.format(**locals()))
+
+
+def _save_tmp_time_series(TS, subj, hems, dirs):
+    nph = TS.shape[1] / len(hems)
+    for num_hem, hem in enumerate(hems):
+        TS_data = TS[:, num_hem*nph:(num_hem+1)*nph]
+        fname = _get_tmp_time_series_filename(subj, hem, dirs)
+        savemat(fname, {'TS': TS_data})
+
+
+def _load_tmp_time_series(subj, hems, dirs):
+    time_series = []
+    for hem in hems:
+        fname = _get_tmp_time_series_filename(subj, hem, dirs)
+        time_series.append(loadmat(fname)['TS'])
+    return np.hstack(time_series)
+
+
+def funcnorm():
     """
     nbrs: (36002, 6)
     triangles: (72000, 3)
@@ -138,18 +186,24 @@ def test_funcnorm():
     subjects = ['ab00', 'ag00', 'ap00', 'aw00', 'er00', 'gw00', 'ls00', 'mg00',
                 'pk00', 'ro00', 'sg00']
     hems = ['lh', 'rh']
+    lambda_metric = 30.0
+    lambda_areal = 30.0
+    n_passes = 1
+    max_res = 3
+
     init_logging()
     logger.info("\033[32mHello world!\033[0m")
 
-    subjects, shape = determine_subj_ordering(subjects, hems)
-
     dirs = {'align': os.path.join(DIR, os.pardir, 'results', 'align'),
             'tmp': os.path.join(DIR, os.pardir, 'results', 'align', 'tmp'),
-            'warps': os.path.join(DIR, os.pardir, 'results', 'align', 'tmp'),
+            'warps': os.path.join(DIR, os.pardir, 'results', 'align', 'warps'),
         }
     for folder in dirs.values():
         if not os.path.exists(folder):
+            logger.info("Creating folder: %s" % folder)
             os.makedirs(folder)
+
+    subjects, shape = determine_subj_ordering(subjects, hems, dirs)
 
     surf_file = os.path.join(DIR, os.pardir, 'results', 'standard2mm_sphere.reg.asc')
     surf = surf_from_file(surf_file)
@@ -161,48 +215,47 @@ def test_funcnorm():
     # BUG? Matlab version used n_nodes in funcnorm but n_triangles in
     # funcnorm_register, which is pretty weird.
 
-    pass_num, subj_num = determine_start_point()
+    pass_num, subj_num = determine_start_point(n_passes, subjects, hems, dirs)
+    logger.info("Starting with pass #{pass_num} and subject #{subj_num}".format(**locals()))
 
     for pass_num in range(pass_num, n_passes):
         logger.info("Running through pass #%d..." % pass_num)
         for subj_num in range(subj_num, len(subjects)):
             subj = subjects[subj_num]
             if pass_num == 0 and subj_num == 0:
-                _save_warp(np.zeros((n_nodes, 3)), subj, 0, 0)
-                atlas_TS = _load_orig_time_series(subj)
-                save_tmp_time_series(atlas_TS, subj)
+                _save_warp(np.zeros((surf.n_nodes, 3)), subj, hems, 0, 0, dirs)
+                atlas_TS = load_orig_time_series(subj, hems)
+                _save_tmp_time_series(atlas_TS, subj, hems, dirs)
                 continue
-            logger.info("Re-creating atlas from previous run...")
+            logger.info("Creating atlas for alignment.")
             if pass_num == 0:
                 atlas_TS = np.array(
-                    [_load_tmp_time_series(subjects[j]) for j in range(subj_num)]
+                    [_load_tmp_time_series(subjects[j], hems, dirs)
+                     for j in range(subj_num)]
                 ).mean(axis=0)
             else:
                 atlas_TS = np.array(
-                    [_load_tmp_time_series(subjects[j])
+                    [_load_tmp_time_series(subjects[j], hems, dirs)
                      for j in range(len(subjects)) if j != subj_num]
                 ).mean(axis=0)
-            logger.info("Completed re-creating atlas from previous run.")
+            logger.info("Completed creating atlas for alignment.")
 
             # TODO separate logging file
-            TS = _load_orig_time_series(subj)
+            TS = load_orig_time_series(subj, hems)
             logger.info("Performing alignment of subject #{subj_num} ({subj}) "
                         "on pass #{pass_num}".format(**locals()))
-            if num_pass == 0:
-                warp = np.zeros((n_nodes, 3))
+            if pass_num == 0:
+                warp = np.zeros((surf.n_nodes, 3))
             else:
                 warp = _load_warp(subj, pass_num-1, pass_num>1)
-            if pass_num == 0:
-                warp = funcnorm_register(atlas_TS, TS, surf, warp, # why atlas_TS first?
-                                         lambda_metric, lambda_areal, max_res)
-            else:
-                warp = funcnorm_register(TS, atlas_TS, surf, warp,
-                                         lambda_metric, lambda_areal, max_res)
+            warp = funcnorm_register(TS, atlas_TS, surf, warp,
+                                     lambda_metric, lambda_areal, max_res)
             logger.info("Completed alignment of subject #{subj_num} ({subj}) "
                         "on pass #{pass_num}".format(**locals()))
-            _save_warp(warp, subj, 0, 0)
-            TS = _compute_interp_on_sphere(TS, surf, warp)  # TODO
-            _save_tmp_time_series(TS, subj)
+            _save_warp(warp, subj, hems, pass_num, 0, dirs)
+            TS = surf.interp_time_series(TS, False)
+            surf.clean_up()
+            _save_tmp_time_series(TS, subj, hems, dirs)
             if pass_num == 0:
                 atlas_TS += TS
         if pass_num > 0:
@@ -210,7 +263,7 @@ def test_funcnorm():
             warps = [_load_warp(subj, pass_num, 0) for subj in subjects]
             warps_zero = compute_zero_correction(surf, warps)
             for subj_num, subj in enumerate(subjects):
-                _save_warp(warps_zero[subj_num], subj, pass_num, 1)
+                _save_warp(warps_zero[subj_num], subj, hems, pass_num, 1, dirs)
             logger.info("Completed zero correcting the warps.")
         subj_num = 0
         logger.info("Completed running through pass #%d..." % pass_num)
@@ -221,46 +274,8 @@ def test_funcnorm():
     logger.info("Completed alignment.")
 
 
-
-
-
-    # fname1 = os.path.join(DIR, '..', 'results',
-    #                     'ag00_lh_2mm_fwhm0_raidersP1_on_sphere.reg.niml.dset')
-    # fname2 = os.path.join(DIR, '..', 'results',
-    #                     'ap00_lh_2mm_fwhm0_raidersP1_on_sphere.reg.niml.dset')
-    # ds1 = load_time_series(fname1)
-    # ds2 = load_time_series(fname2)
-    # n_timepoints, n_nodes = ds1.shape
-    # funcnorm_register(ds1, ds2, surf, np.zeros((n_nodes, 3)),
-    #                   30.0, 30.0, 3)
-
-
-
-# from .parse_surface_file import parse_surface_file
-# from .funcnorm_register import funcnorm_register
-
-# def test_cart_coords_from_surf():
-#     DIR = '/data/movies/raiders/dartmouth/fsrecon/ab00/ab00/SUMA/'
-#     files = [
-#         # 'ico64_lh.sphere.reg.asc',
-#         'ico64_lh.sphere.asc',
-#         'ico64_lh.smoothwm.asc',
-#     ]
-#     for fname in files:
-#         n_nodes, coords = parse_surface_file(DIR + fname)
-#         cart_coords = coords['cart_coords']
-#         print fname, n_nodes, np.linalg.norm(cart_coords, axis=0)
-
-# def test_funcnorm_register():
-#     logger = logging.getLogger('funcnorm')
-#     logger.info("Hello")
-
-# def _test_gds():
-#     init_logging()
-#     surf_file = os.path.join(DIR, '..', 'results', 'standard2mm_sphere.reg.asc')
-#     surf = surf_from_file(surf_file)
-#     surf.normalize_cart()
-#     surf.calc_nbr_res(2)
-#     print surf.nbrs.shape
-#     # for i in range(surf.n_nodes):
-#         # surf.nbrs[i, :]
+def test_funcnorm():
+    try:
+        funcnorm()
+    except Exception as e:
+        logger.exception(e)

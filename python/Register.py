@@ -65,17 +65,13 @@ def funcnorm_register(warp_ds, template_ds, surf, cart_warp,
         #     surf.cart, spher_warp, surf.maps, surf.spher)
         surf.calc_cart_warped(spher_warp)
 
-        method = 'BFGS'
         method = 'L-BFGS-B'
-        # method = 'nelder-mead'
-        # method = 'newton-cg'
         # callback_func = None  # TODO: iteration number
         callback_func = partial(callback_func_full, surf=surf, res=res,
                                 lambda_metric=lambda_metric,
                                 lambda_areal=lambda_areal,
                                 ds1=warp_ds, ds2=ds2, compute_g=False)
         options = {'maxiter': 300,
-                   # 'maxfev': 5,
                    'disp': True}
         output = minimize(cost_func, x0=spher_warp.ravel(), method=method,
                           # jac=True, tol=tol, callback=callback_fn,
@@ -95,8 +91,6 @@ def funcnorm_register(warp_ds, template_ds, surf, cart_warp,
 
         spher_warp = output.x.reshape((surf.n_nodes, 2))
 
-    # surf.cart_warped = _calc_cart_warped_from_spher_warp(
-    #     surf.cart, spher_warp, surf.maps, surf.spher)
     surf.calc_cart_warped(spher_warp)
     cart_warp = surf.cart_warped - surf.cart
 

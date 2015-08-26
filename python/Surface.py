@@ -1,11 +1,15 @@
 import numpy as np
+import logging
 
 from .Coordinates import _calc_spher_coords, _normalize
 from .Metric import _calc_metric_dist
 from .Folding import _calc_oriented_areas
-from .Interpolation import _calc_geodesic_dist, _gds_to_interp_weights
+from .Interpolation import _calc_geodesic_dist, _gds_to_interp_weights, \
+    _interp_time_series
 from .Coordinates import _calc_spher_warp_from_cart_warp, \
     _calc_cart_warped_from_spher_warp
+
+logger = logging.getLogger('funcnorm')
 
 
 def _calc_nbrs(triangles, n_nodes, max_nbrs=6):
@@ -102,6 +106,7 @@ def _update_nbr_res(cart, cart_warped, nbrs, res_nbr_sizes, num_nbrs,
 
 
 class Surface(object):
+    # TODO: clean up surface after each alignment
     def __init__(self, cart, nbrs, triangles):
         """
         Try using (n_nodes, 3) arrays for cart.
@@ -115,8 +120,18 @@ class Surface(object):
         self.n_nodes = cart.shape[0]
         self.n_triangles = triangles.shape[0]
 
-        self.warp_cart = None
         self.cart_warped = None
+
+    def clean_up(self):
+        self.nbrs = self.orig_nbrs
+        self.num_nbrs = np.sum(nbrs != -99, axis=1)
+        del self.res_nbr_sizes
+        del self.upd_nbrs, upd_num_nbrs, upd_res_nbr_sizes
+
+        del self.cart_warped, self.maps
+
+        logger.debug("Completed cleaning up Surface, remaining keys: %s" %
+                     ', '.join(self.__dict__.keys()))
 
     def calc_coord_maps(self):
         if self.cart_warped is None:
@@ -209,6 +224,15 @@ class Surface(object):
         n_nodes_per_hem = self.n_nodes
         n_triangles_per_hem = self.n_triangles
 
+        logger.debug("Before multi_hem: {self.cart.shape}, {self.nbrs.shape}, "
+                     "{self.triangles.shape}, {self.num_nbrs.shape}"
+                     "".format(**locals()))
+        logger.debug("Before multi_hem: {cart}, {nbrs}, "
+                     "{triangles}, {num_nbrs}"
+                     "".format(cart=self.cart.max(), nbrs=self.nbrs.max(),
+                               triangles=self.triangles.max(),
+                               num_nbrs=self.num_nbrs.max()))
+
         self.cart = np.tile(self.cart, (n_hems, 1))
         self.triangles = np.tile(self.triangles, (n_hems, 1))
         self.num_nbrs = np.tile(self.num_nbrs, (n_hems, ))
@@ -219,8 +243,20 @@ class Surface(object):
         for hem_num in range(1, n_hems):
             nbrs = self.nbrs[:n_nodes_per_hem, :]
             nbrs[np.where(nbrs != -99)] += n_nodes_per_hem * hem_num
-            self.nbrs = np.hstack([self.nbrs, nbrs])
+            self.nbrs = np.vstack([self.nbrs, nbrs])
 
-            self.triangles += (np.tile(
-                np.array(range(self.n_triangles))[:, np.newaxis],
-                (1, 3)) / n_triangles_per_hem) * n_triangles_per_hem
+        self.triangles += (
+            np.tile(np.array(range(self.n_triangles))[:, np.newaxis], (1, 3))
+            / n_triangles_per_hem) * n_nodes_per_hem
+
+        logger.debug("After multi_hem: {self.cart.shape}, {self.nbrs.shape}, "
+                     "{self.triangles.shape}, {self.num_nbrs.shape}"
+                     "".format(**locals()))
+        logger.debug("After multi_hem: {cart}, {nbrs}, "
+                     "{triangles}, {num_nbrs}"
+                     "".format(cart=self.cart.max(), nbrs=self.nbrs.max(),
+                               triangles=self.triangles.max(),
+                               num_nbrs=self.num_nbrs.max()))
+
+    def interp_time_series(self, T, nn=False):
+        return _interp_time_series(T, self, nn)

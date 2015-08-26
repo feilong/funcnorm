@@ -1,11 +1,14 @@
 import numpy as np
+import logging
 
-from .utils import _calc_geodesic_dist
+from .utils import _calc_geodesic_dist, gds_const
+
+logger = logging.getLogger('funcnorm')
 
 
 def _calc_interp_weights(spher1, spher2, res, dtype='float', zm=[],
                          compute_derivatives=False):
-    h = 0.0201 * res
+    h = gds_const * res
     if spher1.shape[0] == 1:
         spher1 = np.tile(spher1, (spher2.shape[0], 1))
     gds = _calc_geodesic_dist(spher1, spher2)
@@ -31,7 +34,7 @@ def _calc_interp_weights(spher1, spher2, res, dtype='float', zm=[],
 
 
 def _gds_to_interp_weights(gds, res):
-    h = 0.0201 * res
+    h = gds_const * res
     non_zero = np.where(gds < 2 * np.arcsin(h/2))[0]
     s = 2 * np.sin(gds[non_zero]/2) / h
     weights = (1 - s)**4 * (4*s + 1)
@@ -55,6 +58,43 @@ def _blur_dataset_full(ds, cart, nbrs, num_nbrs, res, thr=1e-8):
         else:
             Q[:, i] = 0
     return Q
+
+
+def _interp_time_series(T, surf, nn=False):
+    n_nodes = T.shape[1]
+    TW = np.zeros(T.shape)
+    nbrs = np.hstack([np.arange(n_nodes)[:, np.newaxis], surf.orig_nbrs])
+    num_nbrs = np.sum(nbrs != -99, axis=1)
+    for j in range(n_nodes):
+        curr_cart = surf.cart_warped[j, :]
+        curr_nbrs = nbrs[j, :num_nbrs[j]]
+        nbrs_cart = surf.cart[curr_nbrs, :]
+        prev_nbr = j - 1
+        while True:
+            projections = nbrs_cart.dot(curr_cart)
+            closest_nbr = curr_nbrs[np.argmax(projections)]
+            curr_nbrs = nbrs[closest_nbr, :num_nbrs[closest_nbr]]
+            nbrs_cart = surf.cart[curr_nbrs, :]
+            if prev_nbr == closest_nbr:
+                break
+            prev_nbr = closest_nbr
+        I = np.argsort(nbrs_cart.dot(curr_cart))[::-1]
+        if nn is True:
+            tri_nbrs = [curr_nbrs[I[0]]]
+        else:
+            tri_nbrs = curr_nbrs[I[:3]]
+        tri_cart = surf.cart[tri_nbrs, :]
+        gds = _calc_geodesic_dist(curr_cart[np.newaxis, :], tri_cart)
+        weights, non_zero = _gds_to_interp_weights(gds, 1)
+        if len(non_zero) == 0:
+            logger.error("Geodesic distances: %r" % gds)
+            raise ValueError("No neighbors found for node #%d %r after "
+                             "warping." % (j, surf.cart_warped[j, :]))
+        elif len(non_zero) == 1:
+            TW[:, j] = T[:, [tri_nbrs[non_zero]]].dot(weights).ravel()
+        else:
+            TW[:, j] = T[:, tri_nbrs[non_zero]].dot(weights).ravel()
+    return TW
 
 
 def _calc_correlation_cost(ds1, ds2, coords_list, maps, spher_warped,
