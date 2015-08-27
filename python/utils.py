@@ -3,9 +3,8 @@ import logging.config
 
 mapping = [[0, 1, 2], [1, 2, 0], [2, 1, 0]]
 
-gds_const = 0.0220493478005
+gds_const = 0.020051620128
 # min: 0.015044525083, mean: 0.020051620128, max: 0.0220493478005
-# Here we use the maximum, otherwise some neighbors might get excluded.
 
 
 def _calc_geodesic_dist(coords1, coords2):
@@ -26,6 +25,39 @@ def _calc_geodesic_dist(coords1, coords2):
     else:
         raise ValueError('Coordinates must have 2 or 3 columns.')
     return gds
+
+
+def renormalize_warps(cart, warps):
+    """a.k.a. zero-correct the warps."""
+    cart_warped = [cart + warp for warp in warps]
+    avg_warped = np.array(cart_warped).mean(axis=0)
+
+    for j in range(avg_warped.shape[0]):
+        avg_warped[j, :] /= np.sqrt(np.sum(avg_warped[j, :]**2))
+        if np.dot(avg_warped[j, :], cart[j, :]) == 1:
+            continue  # Too close to rotate
+
+        c = np.cross(avg_warped[j, :], cart[j, :])
+        c /= np.sqrt(np.sum(c**2))
+        theta = np.arctan2(c[1], c[0])
+        phi = np.arccos(c[2])
+        R1 = np.array([[np.cos(theta), np.sin(theta), 0],
+                       [-np.sin(theta), np.cos(theta), 0],
+                       [0, 0, 1]])
+        R1 = np.dot(np.array([[np.cos(phi), 0, -np.sin(phi)],
+                              [0, 1, 0],
+                              [np.sin(phi), 0, np.cos(phi)]]),
+                    R1)
+        theta = np.arccos(np.dot(avg_warped[j, :], cart[j, :]))
+        R2 = np.array([[np.cos(theta), -np.sin(theta), 0],
+                       [np.sin(theta), np.cos(theta), 0],
+                       [0, 0, 1]])
+        R = np.linalg.inv(R1).dot(R2).dot(R1)
+        for w in cart_warped:
+            w[j, :] = np.dot(R, w[j, :])
+
+    warp_zero = [w - cart for w in cart_warped]
+    return warp_zero
 
 
 def init_logging():
