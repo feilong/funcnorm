@@ -66,30 +66,17 @@ def _interp_time_series(T, cart_warp, surf, nn=False):
     nbrs = np.hstack([np.arange(n_nodes)[:, np.newaxis], surf.orig_nbrs])
     num_nbrs = np.sum(nbrs != -99, axis=1)
     cart_warped = surf.cart + cart_warp
+
     for j in range(n_nodes):
-        # if j == 36104:
-        #     projections = surf.cart.dot(cart_warped[j, :])
-        #     idx = np.argsort(projections)[::-1]
-        #     gds = _calc_geodesic_dist(cart_warped[[j], :], surf.cart[idx[:3], :])
-        curr_cart = cart_warped[j, :]
-        curr_nbrs = nbrs[j, :num_nbrs[j]]
-        nbrs_cart = surf.cart[curr_nbrs, :]
-        prev_nbr = j - 1
-        while True:
-            projections = nbrs_cart.dot(curr_cart)
-            closest_nbr = curr_nbrs[np.argmax(projections)]
-            curr_nbrs = nbrs[closest_nbr, :num_nbrs[closest_nbr]]
-            nbrs_cart = surf.cart[curr_nbrs, :]
-            if prev_nbr == closest_nbr:
-                break
-            prev_nbr = closest_nbr
-        I = np.argsort(nbrs_cart.dot(curr_cart))[::-1]
+        projections = surf.cart.dot(cart_warped[j, :])
+        idx = np.argsort(projections)[::-1]
+        gds = _calc_geodesic_dist(cart_warped[[j], :], surf.cart[idx[:3], :])
         if nn is True:
-            tri_nbrs = [curr_nbrs[I[0]]]
+            tri_nbrs = [idx[0]]
         else:
-            tri_nbrs = curr_nbrs[I[:3]]
+            tri_nbrs = idx[:3]
         tri_cart = surf.cart[tri_nbrs, :]
-        gds = _calc_geodesic_dist(curr_cart[np.newaxis, :], tri_cart)
+        gds = _calc_geodesic_dist(cart_warped[[j], :], tri_cart)
         weights, non_zero = _gds_to_interp_weights(gds, 1)
         if len(non_zero) == 0:
             logger.error("Coordinates: %r %r" % (curr_cart, tri_cart))
@@ -104,6 +91,7 @@ def _interp_time_series(T, cart_warp, surf, nn=False):
             raise ValueError("No neighbors found for node #%d %r after "
                              "warping." % (j, cart_warped[j, :]))
         elif len(non_zero) == 1:
+            logger.warn("Only one neighbor found within range.")
             TW[:, j] = T[:, [tri_nbrs[non_zero]]].dot(weights).ravel()
         else:
             TW[:, j] = T[:, tri_nbrs[non_zero]].dot(weights).ravel()
