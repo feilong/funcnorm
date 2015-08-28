@@ -3,7 +3,7 @@ import numpy as np
 import logging
 from scipy.io import loadmat, savemat
 
-from .utils import init_logging
+from .utils import init_logging, renormalize_warps
 from .Surface import surf_from_file
 from .io import load_time_series
 from .Register import funcnorm_register
@@ -156,24 +156,33 @@ def _check_warp_file_exists(subj, hems, pass_num, zero_corrected, dirs):
     return True
 
 
-def _get_tmp_time_series_filename(subj, hem, dirs):
-    return os.path.join(dirs['tmp'], '{subj}_{hem}.mat'.format(**locals()))
+def _get_tmp_time_series_filename(subj, hem, pass_num, dirs):
+    return os.path.join(dirs['tmp'],
+                        'TS_{subj}_{hem}_{pass_num}.mat'.format(**locals()))
 
 
-def _save_tmp_time_series(TS, subj, hems, dirs):
+def _save_tmp_time_series(TS, subj, hems, pass_num, dirs):
     nph = TS.shape[1] / len(hems)
     for num_hem, hem in enumerate(hems):
         TS_data = TS[:, num_hem*nph:(num_hem+1)*nph]
-        fname = _get_tmp_time_series_filename(subj, hem, dirs)
+        fname = _get_tmp_time_series_filename(subj, hem, pass_num, dirs)
         savemat(fname, {'TS': TS_data})
 
 
-def _load_tmp_time_series(subj, hems, dirs):
+def _load_tmp_time_series(subj, hems, pass_num, dirs):
     time_series = []
     for hem in hems:
-        fname = _get_tmp_time_series_filename(subj, hem, dirs)
+        fname = _get_tmp_time_series_filename(subj, hem, pass_num, dirs)
         time_series.append(loadmat(fname)['TS'])
     return np.hstack(time_series)
+
+
+def _check_tmp_time_series_exists(subj, hems, pass_num, dirs):
+    for hem in hems:
+        fname = _get_tmp_time_series_filename(subj, hem, pass_num, dirs)
+        if not os.path.exists(fname):
+            return False
+    return True
 
 
 def calc_warp(pass_num, subj_num, subj,
@@ -186,8 +195,9 @@ def calc_warp(pass_num, subj_num, subj,
         return
     logger.info("Creating atlas for alignment.")
     atlas_subj = range(len(subjects)) if pass_num > 0 else range(subj_num)
+    atlas_pass_num = pass_num - 1 if pass_num else 0
     atlas_TS = np.array(
-        [_load_tmp_time_series(subjects[j], hems, dirs)
+        [_load_tmp_time_series(subjects[j], hems, atlas_pass_num, dirs)
          for j in atlas_subj if j != subj_num]
         ).mean(axis=0)
     logger.info("Completed creating atlas for alignment.")
@@ -217,7 +227,7 @@ def funcnorm():
     hems = ['lh', 'rh']
     lambda_metric = 30.0
     lambda_areal = 30.0
-    n_passes = 1
+    n_passes = 4  # one more than the matlab version due to 0-based indexing
     max_res = 3
 
     init_logging()
@@ -235,9 +245,6 @@ def funcnorm():
     subjects, shape = determine_subj_ordering(subjects, hems, dirs)
 
     surf_file = os.path.join(DIR, os.pardir, 'results', 'standard2mm_sphere.reg.asc')
-    surf = surf_from_file(surf_file)
-    surf.normalize_cart()
-    surf.multi_hem(len(hems))
 
     lambda_metric /= 4.0
     lambda_areal /= 2.0
@@ -252,22 +259,29 @@ def funcnorm():
         logger.info("Running through pass #%d..." % pass_num)
         for subj_num in range(subj_num, len(subjects)):
             subj = subjects[subj_num]
+            logger.info("Running pass #{pass_num} and subject #{subj_num} "
+                        "({subj})".format(**locals()))
+            surf = surf_from_file(surf_file)
+            surf.normalize_cart()
+            surf.multi_hem(len(hems))
             warp_exists = _check_warp_file_exists(subj, hems, pass_num, 0, dirs)
             if not warp_exists:
                 calc_warp(pass_num, subj_num, subj, surf, subjects, hems, dirs,
                           lambda_metric, lambda_areal, max_res)
-
-            warp = _load_warp(subj, hems, pass_num, 0, dirs)
-            TS = load_orig_time_series(subj, hems)
-            if subj_num > 0 or pass_num > 0:
-                TS = surf.interp_time_series(warp, TS, False)
-            surf.clean_up()
-            _save_tmp_time_series(TS, subj, hems, dirs)
+            TS_exists = _check_tmp_time_series_exists(subj, hems, pass_num, dirs)
+            if not TS_exists:
+                logger.info("Calculating interpolated time series.")
+                warp = _load_warp(subj, hems, pass_num, 0, dirs)
+                TS = load_orig_time_series(subj, hems)
+                if subj_num > 0 or pass_num > 0:
+                    TS = surf.interp_time_series(warp, TS, False)
+                _save_tmp_time_series(TS, subj, hems, pass_num, dirs)
+                logger.info("Completed calculating interpolated time series.")
         if pass_num > 0:
             logger.info("Zero correcting the warps...")
             warps = [_load_warp(subj, hems, pass_num, 0, dirs)
                      for subj in subjects]
-            warps_zero = compute_zero_correction(surf, warps)
+            warps_zero = renormalize_warps(surf.cart, warps)
             for subj_num, subj in enumerate(subjects):
                 _save_warp(warps_zero[subj_num], subj, hems, pass_num, 1, dirs)
             logger.info("Completed zero correcting the warps.")
