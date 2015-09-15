@@ -16,5 +16,7 @@ It contains some useful formulas and API information.
 ## Pages
 
 {% for page in site.pages %}
+{% if page.url != "/index.html" %}
 [{{ page.title }}]({{ site.baseurl }}{{ page.url }})
+{% endif %}
 {% endfor %}
