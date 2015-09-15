@@ -16,5 +16,5 @@ It contains some useful formulas and API information.
 ## Pages
 
 {% for page in site.pages %}
-[{{ page.title }}]({{ page.url }})
+[{{ page.title }}]({{ site.baseurl }}{{ page.url }})
 {% endfor %}

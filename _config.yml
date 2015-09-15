@@ -1,2 +1,3 @@
 highlighter: pygments
 markdown: kramdown
+baseurl: /funcnorm
